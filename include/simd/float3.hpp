@@ -38,11 +38,23 @@ namespace mathsimd {
     inline float3 operator+(float3 const &a, float3 const &b) { return _mm_add_ps(a, b); }
     inline float3 operator-(float3 const &a, float3 const &b) { return _mm_sub_ps(a, b); }
     inline float3 operator*(float3 const &a, float3 const &b) { return _mm_mul_ps(a, b); }
+
     inline bool operator==(float3 const &a, float3 const &b) {
-        auto tmp = _mm_cmpeq_ps(a,b);
-        return tmp[0] != 0.f && tmp[1] != 0.f && tmp[2] != 0.f;
+        return _mm_movemask_epi8(_mm_cmpeq_ps(a,b)) == 0xffff;
     }
     inline bool operator!=(float3 const &a, float3 const &b) { return !(a == b); }
+
+    inline float3 operator * (float const & a, float3 const & b) { return _mm_mul_ps(b, _mm_load1_ps(&a)); }
+
+    inline float3 operator * (float3 const & b, float const & a) { return _mm_mul_ps(b, _mm_load1_ps(&a)); }
+
+    inline float3 operator / (float3 const & b, float const & a) { return _mm_div_ps(b, _mm_load1_ps(&a)); }
+
+    inline __m128 _mm_abs_ps(__m128 fp_val) {
+        static const __m128i NEG{0x7fffffff7fffffff,0x7fffffff7fffffff};
+        auto tmp = _mm_and_si128(*reinterpret_cast<__m128i*>(&fp_val), NEG);
+        return *reinterpret_cast<__m128*>(&tmp);
+    }
 
 }
 #endif //MATHEMATICS_SIMD_FLOAT3_HPP

@@ -7,11 +7,11 @@
 #include <numeric>
 #include <algorithm>
 #include <array>
+#include <limits>
 
 namespace mathseq {
 
     struct float3 {
-        constexpr static float EPSILON = 1e-6f;
     private:
         std::array<float, 3> _val{0, 0, 0};
     public:
@@ -56,32 +56,48 @@ namespace mathseq {
         #undef ASSIGN
         friend bool operator==(float3 const & a, float3 const & b);
         friend bool operator!=(float3 const & a, float3 const & b);
+        friend float3 operator * (float const & a, float3 const & b);
+        friend float3 operator * (float3 const & a, float const & b);
+        friend float3 operator / (float3 const & a, float const & b);
 
     };
 
-#define ASSIGN(OP) \
-inline float3 operator OP (float3 const & a, float3 const & b) { \
-    constexpr auto operation = [](float l, float r) { return l OP r; }; \
-    std::array<float,3> output; \
-    std::transform(a._val.begin(), a._val.end(), b._val.begin(), output.begin(), operation); \
-    return output; \
-}
+    #define ASSIGN(OP) \
+    inline float3 operator OP (float3 const & a, float3 const & b) { \
+        constexpr auto operation = [](float l, float r) { return l OP r; }; \
+        std::array<float,3> output; \
+        std::transform(a._val.begin(), a._val.end(), b._val.begin(), output.begin(), operation); \
+        return output; \
+    }
+        ASSIGN(+)
+        ASSIGN(-)
+        ASSIGN(*)
+    #undef ASSIGN
 
-    ASSIGN(+)
-    ASSIGN(-)
-    ASSIGN(*)
-#undef ASSIGN
+    inline float3 operator * (float const & a, float3 const & b) {
+        return float3{a*b.x, a*b.y, a*b.z};
+    }
 
-inline bool operator==(float3 const & a, float3 const & b) {
-    constexpr auto operation = [](float l, float r) { return std::fabs(l - r) < float3::EPSILON * (l+r); };
-    constexpr auto true_check = [](bool l, bool r) { return l && r; };
-    std::array<bool,3> output{false, false, false};
-    std::transform(a._val.begin(), a._val.end(), b._val.begin(), output.begin(), operation);
-    return std::accumulate(output.begin(), output.end(), true, true_check);
-}
-inline bool operator!=(float3 const & a, float3 const & b) {
-    return !(a == b);
-}
+    inline float3 operator * (float3 const & a, float const & b) {
+        return float3{b * a.x, b * a.y, b * a.z};
+    }
+
+    inline float3 operator / (float3 const & a, float const & b) {
+        return float3{b / a.x, b / a.y, b / a.z};
+    }
+
+    inline bool operator==(mathseq::float3 const & a, mathseq::float3 const & b) {
+        auto output = true;
+
+        for (auto i = 0; i < 3; ++i) {
+            output &= a._val.at(i) == b._val.at(i);
+        }
+        return output;
+    }
+
+    inline bool operator!=(float3 const & a, float3 const & b) {
+        return !(a == b);
+    }
 }
 #endif //MATHEMATICS_SEQ_FLOAT3_HPP
 

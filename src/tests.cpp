@@ -43,18 +43,28 @@ void mathtests::test_simd_cross() {
 void mathtests::test_seq_cross() {
     using namespace mathseq;
     float3 a(1,3,5),b(2,4,6);
-    assert(float3::cross(a,b) == 2.f + 12.f + 30.f);
+    float3 expected(3.f * 6.f - 5.f * 4.f,
+               2.f*5.f - 1.f*6.f,
+               1.f*4.f - 2.f*3.f);
+    auto actual = float3::cross(a,b);
+    assert(actual == expected);
 }
 
 static std::array<mathsimd::float3,VALUES>& generate_simd_vectors() {
+    static bool created = false;
     static std::array<mathsimd::float3,VALUES> test_cases;
+    if (created) return test_cases;
     for (auto &val : test_cases) { val = {rnd(),rnd(),rnd()}; }
+    created = true;
     return test_cases;
 }
 
 static std::array<mathseq::float3,VALUES>& generate_seq_vectors() {
+    static bool created = false;
     static std::array<mathseq::float3,VALUES> test_cases;
+    if (created) return test_cases;
     for (auto &val : test_cases) { val = mathseq::float3{rnd(),rnd(),rnd() }; }
+    created = true;
     return test_cases;
 }
 
