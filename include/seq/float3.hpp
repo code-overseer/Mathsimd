@@ -22,7 +22,6 @@ namespace mathseq {
         float3(float3 const &other) : _val(other._val) {}
         float3(float3 &&other) noexcept : _val(other._val) {}
         operator std::array<float, 3>() const { return _val; }
-
         inline float3 &operator=(std::array<float, 3> const &other) {
             _val = other;
             return *this;
@@ -43,17 +42,24 @@ namespace mathseq {
         float &y = _val[1];
         float &z = _val[2];
 
-        static float dot(float3 const &a, float3 const &b);
-        static float3 cross(float3 const &a, float3 const &b);
+        static inline float dot(float3 const &a, float3 const &b) {
+            return std::inner_product(a._val.begin(), a._val.end(), b._val.begin(), 0.f);
+        }
+        static inline float3 cross(float3 const &a, float3 const &b) {
+            return float3{
+                    a.y * b.z - b.y * a.z,
+                    a.z * b.x - a.x * b.z,
+                    a.x * b.y - a.y * b.x};
+        }
 
-        #define ASSIGN(OP) \
+        #define ARITHMETIC(OP) \
         friend float3 operator OP (float3 const & a, float3 const & b);
 
-        ASSIGN(+)
-        ASSIGN(-)
-        ASSIGN(*)
+        ARITHMETIC(+)
+        ARITHMETIC(-)
+        ARITHMETIC(*)
 
-        #undef ASSIGN
+        #undef ARITHMETIC
         friend bool operator==(float3 const & a, float3 const & b);
         friend bool operator!=(float3 const & a, float3 const & b);
         friend float3 operator * (float const & a, float3 const & b);
@@ -62,17 +68,17 @@ namespace mathseq {
 
     };
 
-    #define ASSIGN(OP) \
+    #define ARITHMETIC(OP) \
     inline float3 operator OP (float3 const & a, float3 const & b) { \
         constexpr auto operation = [](float l, float r) { return l OP r; }; \
-        std::array<float,3> output; \
+        std::array<float,3> output{0,0,0}; \
         std::transform(a._val.begin(), a._val.end(), b._val.begin(), output.begin(), operation); \
         return output; \
     }
-        ASSIGN(+)
-        ASSIGN(-)
-        ASSIGN(*)
-    #undef ASSIGN
+        ARITHMETIC(+)
+        ARITHMETIC(-)
+        ARITHMETIC(*)
+    #undef ARITHMETIC
 
     inline float3 operator * (float const & a, float3 const & b) {
         return float3{a*b.x, a*b.y, a*b.z};

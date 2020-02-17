@@ -3,9 +3,11 @@
 #include <array>
 #include <ctime>
 #include <cmath>
+#include <iostream>
+#include <chrono>
 
 
-constexpr unsigned int TESTS = 10000u;
+constexpr unsigned int TESTS = 1000000u;
 constexpr unsigned int VALUES = 100u;
 
 static float rnd() {
@@ -34,10 +36,13 @@ void mathtests::test_simd_cross() {
     using namespace mathsimd;
     float3 a(1,3,5);
     float3 b(2,4,6);
-    float3 ans(3.f*6.f - 5.f*4.f,
+    float3 expected(3.f * 6.f - 5.f * 4.f,
            2.f*5.f - 1.f*6.f,
            1.f*4.f - 2.f*3.f);
-    assert(float3::cross(a,b) == ans);
+    auto actual =float3::cross(a, b);
+    printf("%f,%f,%f\n",expected.x(),expected.y(),expected.z());
+    printf("%f,%f,%f\n",actual.x(),actual.y(),actual.z());
+    assert(actual == expected);
 }
 
 void mathtests::test_seq_cross() {
@@ -54,7 +59,9 @@ static std::array<mathsimd::float3,VALUES>& generate_simd_vectors() {
     static bool created = false;
     static std::array<mathsimd::float3,VALUES> test_cases;
     if (created) return test_cases;
-    for (auto &val : test_cases) { val = {rnd(),rnd(),rnd()}; }
+    for (auto &val : test_cases) {
+        val = mathsimd::float3(rnd(),rnd(),rnd());
+    }
     created = true;
     return test_cases;
 }
@@ -69,29 +76,60 @@ static std::array<mathseq::float3,VALUES>& generate_seq_vectors() {
 }
 
 void mathtests::benchmark_simd_dot() {
-    auto vectors = generate_simd_vectors();
-    auto time = clock();
+    auto& vectors = generate_simd_vectors();
+    using namespace std::chrono;
+    float c = 0.f;
+    auto start = high_resolution_clock::now();
+    for (auto i = 0ll; i < TESTS; ++i) {
+        c += mathsimd::float3::dot(vectors[rnd_idx()],vectors[rnd_idx()]);
+    }
+    auto elapsed = high_resolution_clock::now() - start;
+    printf("Dot SIMD: %f\n", static_cast<double>(duration_cast<microseconds>(elapsed).count()) / TESTS);
+    std::cout<<"Value of sum is "<<c<<std::endl;
+}
+
+void mathtests::benchmark_seq_dot() {
+    auto& vectors = generate_seq_vectors();
+    using namespace std::chrono;
+    float c = 0.f;
+    auto start = high_resolution_clock::now();
+    for (auto i = 0ll; i < TESTS; ++i) {
+        c += mathseq::float3::dot(vectors[rnd_idx()],vectors[rnd_idx()]);
+    }
+    auto elapsed = high_resolution_clock::now() - start;
+    printf("Dot SEQ: %f\n", static_cast<double>(duration_cast<microseconds>(elapsed).count()) / TESTS);
+    std::cout<<"Value of sum is "<<c<<std::endl;
+}
+
+void mathtests::benchmark_simd_cross() {
+    auto& vectors = generate_simd_vectors();
+    using namespace std::chrono;
+    auto start = high_resolution_clock::now();
+    for (auto i = 0ll; i < TESTS; ++i) {
+        vectors[i % VALUES] = mathsimd::float3::cross(vectors[rnd_idx()],vectors[rnd_idx()]);
+
+    }
+    auto elapsed = high_resolution_clock::now() - start;
+    printf("Cross SIMD: %f\n", static_cast<double>(duration_cast<microseconds>(elapsed).count()) / TESTS);
     float c = 0.f;
     for (auto i = 0ll; i < TESTS; ++i) {
         c += mathsimd::float3::dot(vectors[rnd_idx()],vectors[rnd_idx()]);
     }
-    printf("SIMD: %f \t SUM: %f\n", static_cast<double>(clock() - time) / CLOCKS_PER_SEC / TESTS, c);
+    std::cout<<"Value of sum is "<<c<<std::endl;
 }
 
-void mathtests::benchmark_seq_dot() {
-    auto vectors = generate_seq_vectors();
-    auto time = clock();
+void mathtests::benchmark_seq_cross() {
+    auto& vectors = generate_seq_vectors();
+    using namespace std::chrono;
+    auto start = high_resolution_clock::now();
+    for (auto i = 0ll; i < TESTS; ++i) {
+        vectors[i % VALUES] = mathseq::float3::cross(vectors[rnd_idx()],vectors[rnd_idx()]);
+    }
+    auto elapsed = high_resolution_clock::now() - start;
+    printf("Cross SEQ: %f\n", static_cast<double>(duration_cast<microseconds>(elapsed).count()) / TESTS);
     float c = 0.f;
     for (auto i = 0ll; i < TESTS; ++i) {
         c += mathseq::float3::dot(vectors[rnd_idx()],vectors[rnd_idx()]);
     }
-    printf("SIMD: %f \t SUM: %f\n", static_cast<double>(clock() - time) / CLOCKS_PER_SEC / TESTS, c);
-}
-
-void mathtests::benchmark_simd_cross() {
-
-}
-
-void mathtests::benchmark_seq_cross() {
-
+    std::cout<<"Value of sum is "<<c<<std::endl;
 }
