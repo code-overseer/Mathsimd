@@ -1,23 +1,28 @@
 #ifndef MATHEMATICS_TESTS_HPP
 #define MATHEMATICS_TESTS_HPP
+#include "../include/mathsimd.hpp"
+#include <array>
+#include <ctime>
+#include <cmath>
+#include <iostream>
+#include <chrono>
 
 namespace mathtests {
 
-    void test_simd_dot();
+    void test_float3_dot();
 
-    void test_seq_dot();
+    void test_float3_cross();
 
-    void test_simd_cross();
+    void test_float2_dot();
 
-    void test_seq_cross();
+    void test_float4_dot();
+
+    void test_float4_cross();
 
     void benchmark_simd_dot();
 
-    void benchmark_seq_dot();
-
     void benchmark_simd_cross();
 
-    void benchmark_seq_cross();
 
 }
 

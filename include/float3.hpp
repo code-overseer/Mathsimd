@@ -8,11 +8,12 @@
 #include <utility>
 #include <cmath>
 #include <cstdio>
+#include <iostream>
+#include "constants.hpp"
 
 namespace mathsimd {
 
     struct float3 {
-        constexpr static float EPSILON = 1e-6f;
     private:
         __m128 _val{0, 0, 0};
     public:
@@ -26,6 +27,9 @@ namespace mathsimd {
         float &x() { return *reinterpret_cast<float*>(&_val); }
         float &y() { return *(reinterpret_cast<float*>(&_val) + 1); }
         float &z() { return *(reinterpret_cast<float*>(&_val) + 2); }
+        [[nodiscard]] float x() const { return _val[0]; }
+        [[nodiscard]] float y() const { return _val[1]; }
+        [[nodiscard]] float z() const { return _val[2]; }
 
         #define ARITHMETIC(OP) \
         friend float3 operator OP (float3 const &a, float3 const &b); \
@@ -72,8 +76,8 @@ namespace mathsimd {
 
     inline __m128 _mm_abs_ps(__m128 fp_val) {
         static const __m128i NEG{0x7fffffff7fffffff,0x7fffffff7fffffff};
-        auto tmp = _mm_and_si128(*reinterpret_cast<__m128i*>(&fp_val), NEG);
-        return *reinterpret_cast<__m128*>(&tmp);
+        auto tmp = _mm_and_si128(_mm_castps_si128(fp_val), NEG);
+        return _mm_castsi128_ps(tmp);
     }
 
     #define ARITHMETIC(OP) \
@@ -90,12 +94,16 @@ namespace mathsimd {
     inline float3 operator / (float3 const &a, T const &b) { return a / static_cast<float>(b); }
 
     inline bool operator==(float3 const &a, float3 const &b) {
-        auto tmp = static_cast<__m128>(a - b) < float3::EPSILON;
-        return _mm_movemask_epi8(*reinterpret_cast<__m128i*>(&tmp)) == 0xffff;
+        auto tmp = static_cast<__m128>(a - b) < EPSILON_F;
+        return _mm_movemask_epi8(tmp) == 0xffff;
     }
 
     inline bool operator!=(float3 const &a, float3 const &b) { return !(a == b); }
 
+    inline std::ostream& operator << (std::ostream& stream, float3 const &input) {
+        stream << "(" << input.x() << ", " << input.y() << ", " << input.z() <<')';
+        return stream;
+    }
 
 }
 #endif //MATHEMATICS_SIMD_FLOAT3_HPP
