@@ -21,7 +21,9 @@ void mathtests::test_float2_dot() {
     for (auto &i: ref_a) { i = rnd(); }
     for (auto &i: ref_b) { i = rnd(); }
     float2 a(ref_a[0],ref_a[1]),b(ref_b[0],ref_b[1]);
-    assert(float2::dot(a,b) == std::inner_product(ref_a, ref_a+2, ref_b, 0.f));
+    auto actual = float2::dot(a,b);
+    auto expected = std::inner_product(ref_a, ref_a+2, ref_b, 0.f);
+    assert(std::fabs(actual - expected) < EPSILON_F);
 }
 
 void mathtests::test_float4_dot() {
@@ -30,18 +32,22 @@ void mathtests::test_float4_dot() {
     for (auto &i: ref_a) { i = rnd(); }
     for (auto &i: ref_b) { i = rnd(); }
     float4 a(ref_a[0],ref_a[1], ref_a[2],ref_a[3]),b(ref_b[0],ref_b[1],ref_b[2],ref_b[3]);
-    std::cout << a << '\n' << b << '\n' << float4::dot(a,b) << '\n' << std::inner_product(ref_a, ref_a+4, ref_b, 0.f) <<std::endl;
-    assert(float4::dot(a,b) == std::inner_product(ref_a, ref_a+4, ref_b, 0.f));
+    auto actual = float4::dot(a,b);
+    auto expected = std::inner_product(ref_a, ref_a+4, ref_b, 0.f);
+    assert(std::fabs(actual - expected) < EPSILON_F);
 }
 
 void mathtests::test_float4_cross() {
     using namespace mathsimd;
-    float3 a(1,3,5);
-    float3 b(2,4,6);
-    float3 expected(3.f * 6.f - 5.f * 4.f,
-                    2.f*5.f - 1.f*6.f,
-                    1.f*4.f - 2.f*3.f);
-    auto actual =float3::cross(a, b);
+    float ref_a[4], ref_b[4];
+    for (auto &i: ref_a) { i = rnd(); }
+    for (auto &i: ref_b) { i = rnd(); }
+    float4 a(ref_a[0],ref_a[1], ref_a[2],ref_a[3]),b(ref_b[0],ref_b[1],ref_b[2],ref_b[3]);
+    float4 expected(ref_a[1]*ref_b[2] - ref_a[2]*ref_b[1],
+                    ref_a[2]*ref_b[0] - ref_a[0]*ref_b[2],
+                    ref_a[0]*ref_b[1] - ref_a[1]*ref_b[0],
+                    ref_a[3]*ref_b[3] - ref_a[3]*ref_b[3]);
+    auto actual = float4::cross(a, b);
     assert(actual == expected);
 }
 
@@ -51,7 +57,9 @@ void mathtests::test_float3_dot() {
     for (auto &i: ref_a) { i = rnd(); }
     for (auto &i: ref_b) { i = rnd(); }
     float3 a(ref_a[0],ref_a[1], ref_a[2]),b(ref_b[0],ref_b[1],ref_b[2]);
-    assert(float3::dot(a,b) == std::inner_product(ref_a, ref_a+3, ref_b, 0.f));
+    auto actual = float3::dot(a,b);
+    auto expected = std::inner_product(ref_a, ref_a+3, ref_b, 0.f);
+    assert(std::fabs(actual - expected) < EPSILON_F);
 }
 
 void mathtests::test_float3_cross() {
@@ -61,8 +69,51 @@ void mathtests::test_float3_cross() {
     float3 expected(3.f * 6.f - 5.f * 4.f,
            2.f*5.f - 1.f*6.f,
            1.f*4.f - 2.f*3.f);
-    auto actual =float3::cross(a, b);
+    auto actual = float3::cross(a, b);
     assert(actual == expected);
+}
+using M44 = std::array<std::array<float,4>,4>;
+static M44 randmat()
+{
+    M44 M;
+    for (int i=0; i < 4; i++) {
+        for (int j=0; j < 4; j++) {
+            M[i][j] = rnd();
+        }
+    }
+    return M;
+}
+
+static mathsimd::float4x4 copy(M44 const &a)
+{
+    __m128 t[]{_mm_loadu_ps(a[0].data()),
+               _mm_loadu_ps(a[1].data()),
+               _mm_loadu_ps(a[2].data()),
+               _mm_loadu_ps(a[3].data())};
+
+    return mathsimd::float4x4(t[0],t[1],t[2],t[3]);
+}
+
+static M44 operator*(M44 const &a, M44 const &b) {
+    M44 t;
+    for (volatile int i=0; i < 4; i++)
+        for (volatile int j=0; j < 4; j++)
+            t[j][i] = a[0][i]*b[j][0] + a[1][i]*b[j][1] + a[2][i]*b[j][2] + a[3][i]*b[j][3];
+    return t;
+}
+
+
+
+void mathtests::test_float4x4_matmul() {
+    using namespace mathsimd;
+    M44 A = randmat();
+    M44 B = randmat();
+    float4x4 a = copy(A);
+    float4x4 b = copy(B);
+    float4x4 out = float4x4::matmul(a,b);
+    M44 ref = A*B;
+
+    assert(!memcmp(static_cast<float const *>(out), &ref[0], sizeof(out)));
 }
 
 static std::array<mathsimd::float3,VALUES>& generate_simd_vectors() {

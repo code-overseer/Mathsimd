@@ -1,5 +1,5 @@
-#ifndef FLOAT2_HPP
-#define FLOAT2_HPP
+#ifndef MATHEMATICS_SIMD_FLOAT2_HPP
+#define MATHEMATICS_SIMD_FLOAT2_HPP
 
 #include <immintrin.h>
 #include <array>

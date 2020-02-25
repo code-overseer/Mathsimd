@@ -17,6 +17,8 @@ namespace mathtests {
 
     void test_float4_dot();
 
+    void test_float4x4_matmul();
+
     void test_float4_cross();
 
     void benchmark_simd_dot();

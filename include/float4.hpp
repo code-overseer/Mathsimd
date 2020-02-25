@@ -43,11 +43,7 @@ namespace mathsimd {
         template<typename T, typename std::enable_if<std::is_arithmetic<T>::value>::type *>
         friend float4 operator / (float4 const &a, T const &b);
 
-        static float dot(float4 const &a, float4 const &b) {
-            auto c = a._val * b._val;
-            auto tmp = _mm_add_ps(c, _mm_permute_ps(c, 78));
-            return _mm_add_ss(tmp, _mm_permute_ps(c, 85))[0];
-        }
+        static float dot(float4 const &a, float4 const &b);
 
         [[nodiscard]] inline float sqrMagnitude() const { return dot(*this, *this); }
         [[nodiscard]] inline float magnitude() const { return std::sqrt(sqrMagnitude()); }
@@ -100,6 +96,12 @@ namespace mathsimd {
     inline std::ostream& operator << (std::ostream& stream, float4 const &input) {
         stream << "(" << input.x() << ", " << input.y() << ", " << input.z() << ", " << input.w() <<')';
         return stream;
+    }
+
+    inline float float4::dot(const mathsimd::float4 &a, const mathsimd::float4 &b) {
+        auto c = a._val * b._val;
+        auto tmp = _mm_add_ps(c, _mm_permute_ps(c, 78));
+        return _mm_add_ss(tmp, _mm_permute_ps(tmp, 85))[0];
     }
 }
 #endif //MATHEMATICS_SIMD_FLOAT4_HPP

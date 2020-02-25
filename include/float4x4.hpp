@@ -11,16 +11,16 @@
 namespace mathsimd {
 
 	struct float4x4 {
+	private:
 	    union M4x4 {
 	        float f[4][4];
-	        std::array<__m128,4> cols{__m128{0,0,0,0},__m128{0,0,0,0},__m128{0,0,0,0},__m128{0,0,0,0}};
-            std::array<__m256,2> x2cols;
+	        __m128 cols[4]{__m128{0,0,0,0},__m128{0,0,0,0},__m128{0,0,0,0},__m128{0,0,0,0}};
+            __m256 x2cols[2];
 	        M4x4(__m256 const&a, __m256 const &b) : x2cols{a, b} {};
             M4x4(__m128 const&c0, __m128 const &c1, __m128 const &c2, __m128 const &c3) : cols{c0, c1, c2, c3} {};
             M4x4() = default;
             M4x4(M4x4 const& other) : x2cols{other.x2cols[0], other.x2cols[1]} {}
 	    };
-	private:
 		M4x4 _val;
 	public:
 		float4x4() = default;
@@ -28,8 +28,8 @@ namespace mathsimd {
         float4x4(float4 const &c0, float4 const &c1, float4 const &c2, float4 const &c3) : _val(c0,c1,c2,c3) {}
         float4x4(__m128 const &c0, __m128 const &c1, __m128 const &c2, __m128 const &c3) : _val(c0,c1,c2,c3) {}
         float4x4(__m256 const &a, __m256 const &b) : _val(a,b) {}
-        inline operator __m256 const*() const { return _val.x2cols.data(); }
-        inline operator __m128 const*() const { return _val.cols.data(); }
+        inline operator __m256 const*() const { return _val.x2cols; }
+        inline operator __m128 const*() const { return _val.cols; }
         inline float const* operator[](int i) const { return _val.f[i]; }
         inline operator float const*() const { return _val.f[0]; }
 
@@ -56,8 +56,8 @@ namespace mathsimd {
         friend float4x4 operator / (float4x4 const &a, T const &b);
 
         static float4x4 matmul(float4x4 const &a, float4x4 const &b) {
-            __m128 const* l = a._val.cols.data();
-            __m256 const* r = b._val.x2cols.data();
+            __m128 const* l = a._val.cols;
+            __m256 const* r = b._val.x2cols;
             __m256 out0;
             out0 = _mm256_mul_ps(_mm256_permute_ps(r[0], 0x00), _mm256_broadcast_ps(l));
             out0 = _mm256_add_ps(out0, _mm256_mul_ps(_mm256_permute_ps(r[0], 0x55), _mm256_broadcast_ps(l + 1)));
