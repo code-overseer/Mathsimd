@@ -1,4 +1,4 @@
-#include "../include/tests.hpp"
+#include "tests.hpp"
 #include <numeric>
 #include <iostream>
 constexpr unsigned int TESTS = 1000000u;
@@ -23,7 +23,11 @@ void mathtests::test_float2_dot() {
     float2 a(ref_a[0],ref_a[1]),b(ref_b[0],ref_b[1]);
     auto actual = float2::dot(a,b);
     auto expected = std::inner_product(ref_a, ref_a+2, ref_b, 0.f);
-    assert(std::fabs(actual - expected) < EPSILON_F);
+    std::cout.precision(20);
+    int ac, e;
+    memcpy(&ac, &actual, sizeof(ac));
+    memcpy(&e, &expected, sizeof(e));
+    assert(std::fabs(expected - actual) < EPSILON_F);
 }
 
 void mathtests::test_float4_dot() {

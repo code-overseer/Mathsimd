@@ -12,23 +12,31 @@ namespace mathsimd {
 
     struct float4 {
     private:
-        __m128 _val{0.f, 0.f, 0.f, 0.f};
+        union F4 {
+            float f[4];
+            __m128 vec{0,0,0,0};
+            F4(__m128 const& other) : vec{other} {}
+            F4(float const &x, float const &y, float const &z, float const &w) : vec{x, y, z, w} {}
+            F4() = default;
+            F4(F4 const &other) :  vec(other.vec) {}
+        };
+        F4 _val{0.f, 0.f, 0.f, 0.f};
     public:
         float4() = default;
         float4(float const &x, float const &y, float const &z, float const &w) : _val{x, y, z, w} {}
-        float4(float4 const &other) : _val(other) {}
+        float4(float4 const &other) : _val(other._val) {}
         float4(__m128 const &other) : _val(other) {}
-        inline operator __m128() const { return _val; }
+        inline operator __m128() const { return _val.vec; }
         inline float4 &operator=(float4 const &other) = default;
-        inline float4 &operator=(__m128 const &other) { _val = other; return *this; }
-        float &x() { return *reinterpret_cast<float*>(&_val); }
-        float &y() { return *(reinterpret_cast<float*>(&_val) + 1); }
-        float &z() { return *(reinterpret_cast<float*>(&_val) + 2); }
-        float &w() { return *(reinterpret_cast<float*>(&_val) + 3); }
-        float x() const { return _val[0]; }
-        float y() const { return _val[1]; }
-        float z() const { return _val[2]; }
-        float w() const { return _val[3]; }
+        inline float4 &operator=(__m128 const &other) { _val.vec = other; return *this; }
+        float &x() { return *_val.f; }
+        float &y() { return *(_val.f + 1); }
+        float &z() { return *(_val.f + 2); }
+        float &w() { return *(_val.f + 3); }
+        [[nodiscard]] float x() const { return _val.vec[0]; }
+        [[nodiscard]] float y() const { return _val.vec[1]; }
+        [[nodiscard]] float z() const { return _val.vec[2]; }
+        [[nodiscard]] float w() const { return _val.vec[3]; }
 
         #define ARITHMETIC(OP) \
         friend float4 operator OP (float4 const &a, float4 const &b); \
@@ -47,13 +55,13 @@ namespace mathsimd {
 
         [[nodiscard]] inline float sqrMagnitude() const { return dot(*this, *this); }
         [[nodiscard]] inline float magnitude() const { return std::sqrt(sqrMagnitude()); }
-        [[nodiscard]] inline float4 normalized() const { return this->_val / magnitude(); }
+        [[nodiscard]] inline float4 normalized() const { return _val.vec / magnitude(); }
 
         static inline float4 cross(float4 const &a, float4 const &b) {
-            auto tmp0 = _mm_shuffle_ps(a._val,a._val,_MM_SHUFFLE(3,0,2,1));
-            auto tmp1 = _mm_shuffle_ps(b._val,b._val,_MM_SHUFFLE(3,1,0,2));
-            auto tmp2 = _mm_shuffle_ps(a._val,a._val,_MM_SHUFFLE(3,1,0,2));
-            auto tmp3 = _mm_shuffle_ps(b._val,b._val,_MM_SHUFFLE(3,0,2,1));
+            auto tmp0 = _mm_shuffle_ps(a._val.vec,a._val.vec,_MM_SHUFFLE(3,0,2,1));
+            auto tmp1 = _mm_shuffle_ps(b._val.vec,b._val.vec,_MM_SHUFFLE(3,1,0,2));
+            auto tmp2 = _mm_shuffle_ps(a._val.vec,a._val.vec,_MM_SHUFFLE(3,1,0,2));
+            auto tmp3 = _mm_shuffle_ps(b._val.vec,b._val.vec,_MM_SHUFFLE(3,0,2,1));
             return _mm_sub_ps(_mm_mul_ps(tmp0,tmp1),_mm_mul_ps(tmp2,tmp3));
         }
 
@@ -74,17 +82,17 @@ namespace mathsimd {
 
 
     #define ARITHMETIC(OP) \
-        inline float4 operator OP (float4 const &a, float4 const &b) { return a._val OP b._val; } \
+        inline float4 operator OP (float4 const &a, float4 const &b) { return a._val.vec OP b._val.vec; } \
         template<typename T, typename std::enable_if<std::is_arithmetic<T>::value>::type * = nullptr> \
-        inline float4 operator OP (T const &a, float4 const &b) { return static_cast<float>(a) OP b._val; } \
+        inline float4 operator OP (T const &a, float4 const &b) { return static_cast<float>(a) OP b._val.vec; } \
         template<typename T, typename std::enable_if<std::is_arithmetic<T>::value>::type * = nullptr> \
-        inline float4 operator OP (float4 const &a, T const &b) { return a._val OP static_cast<float>(b); }
+        inline float4 operator OP (float4 const &a, T const &b) { return a._val.vec OP static_cast<float>(b); }
     ARITHMETIC(+)
     ARITHMETIC(-)
     ARITHMETIC(*)
     #undef ARITHMETIC
     template<typename T, typename std::enable_if<std::is_arithmetic<T>::value>::type * = nullptr>
-    inline float4 operator / (float4 const &a, T const &b) { return a._val / static_cast<float>(b); }
+    inline float4 operator / (float4 const &a, T const &b) { return a._val.vec / static_cast<float>(b); }
 
     inline bool operator==(float4 const &a, float4 const &b) {
         auto tmp = static_cast<__m128>(a - b) < EPSILON_F;
@@ -99,7 +107,7 @@ namespace mathsimd {
     }
 
     inline float float4::dot(const mathsimd::float4 &a, const mathsimd::float4 &b) {
-        auto c = a._val * b._val;
+        auto c = a._val.vec * b._val.vec;
         auto tmp = _mm_add_ps(c, _mm_permute_ps(c, 78));
         return _mm_add_ss(tmp, _mm_permute_ps(tmp, 85))[0];
     }

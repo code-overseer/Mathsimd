@@ -1,5 +1,5 @@
 #include <cstdio>
-#include "include/tests.hpp"
+#include "tests/tests.hpp"
 
 int main() {
 

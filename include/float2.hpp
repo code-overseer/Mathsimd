@@ -7,23 +7,32 @@
 #include <iostream>
 
 namespace mathsimd {
-    typedef float f2 __attribute__((__vector_size__(2 * sizeof(float))));
+
 
     struct float2 {
     private:
-        f2 _val{0.f, 0.f};
+        typedef float vec2 __attribute__((__vector_size__(2 * sizeof(float))));
+        union F2 {
+            float f[2];
+            vec2 vec{0,0};
+            F2(vec2 const& other) : vec{other} {}
+            F2(float const &x, float const &y) : vec{x, y} {}
+            F2() = default;
+            F2(F2 const &other) :  vec(other.vec) {}
+        };
+        F2 _val{0.f, 0.f};
     public:
         float2() = default;
         float2(float const &x, float const &y) : _val{x, y} {}
-        inline operator f2() const { return _val; }
-        float2(float2 const &other) : _val(other) {}
-        float2(f2 const &other) : _val(other) {}
+        inline operator vec2() const { return _val.vec; }
+        float2(float2 const &other) : _val(other._val) {}
+        float2(vec2 const &other) : _val(other) {}
         inline float2 &operator=(float2 const &other) = default;
-        inline float2 &operator=(f2 const &other) { _val = other; return *this; }
-        float &x() { return *reinterpret_cast<float*>(&_val); }
-        float &y() { return *(reinterpret_cast<float*>(&_val) + 1); }
-        [[nodiscard]] float x() const { return _val[0]; }
-        [[nodiscard]] float y() const { return _val[1]; }
+        inline float2 &operator=(vec2 const &other) { _val = other; return *this; }
+        float &x() { return *_val.f; }
+        float &y() { return *(_val.f + 1); }
+        [[nodiscard]] float x() const { return _val.vec[0]; }
+        [[nodiscard]] float y() const { return _val.vec[1]; }
 
         #define ARITHMETIC(OP) \
         friend float2 operator OP (float2 const &a, float2 const &b); \
@@ -40,13 +49,12 @@ namespace mathsimd {
 
         static float dot(float2 const &a, float2 const &b) {
             auto c = a * b;
-            __m128 tmp{c._val[0], c._val[1]};
-            return _mm_add_ss(tmp, _mm_permute_ps(tmp,1))[0];
+            return c._val.vec[0] + c._val.vec[1];
         }
 
         [[nodiscard]] inline float sqrMagnitude() const { return dot(*this, *this); }
         [[nodiscard]] inline float magnitude() const { return std::sqrt(sqrMagnitude()); }
-        [[nodiscard]] inline float2 normalized() const { return this->_val / magnitude(); }
+        [[nodiscard]] inline float2 normalized() const { return _val.vec / magnitude(); }
 
         #define FUNC(NAME,X,Y) \
         static inline float2 NAME () { return {X,Y}; }
@@ -62,11 +70,11 @@ namespace mathsimd {
     };
 
 #define ARITHMETIC(OP) \
-    inline float2 operator OP (float2 const &a, float2 const &b) { return a._val OP b._val; } \
+    inline float2 operator OP (float2 const &a, float2 const &b) { return a._val.vec OP b._val.vec; } \
     template<typename T, typename std::enable_if<std::is_arithmetic<T>::value>::type * = nullptr> \
-    inline float2 operator OP (T const &a, float2 const &b) { return static_cast<float>(a) OP b._val; } \
+    inline float2 operator OP (T const &a, float2 const &b) { return static_cast<float>(a) OP b._val.vec; } \
     template<typename T, typename std::enable_if<std::is_arithmetic<T>::value>::type * = nullptr> \
-    inline float2 operator OP (float2 const &a, T const &b) { return a._val OP static_cast<float>(b); }
+    inline float2 operator OP (float2 const &a, T const &b) { return a._val.vec OP static_cast<float>(b); }
     ARITHMETIC(+)
     ARITHMETIC(-)
     ARITHMETIC(*)
@@ -74,10 +82,10 @@ namespace mathsimd {
 
 
     template<typename T, typename std::enable_if<std::is_arithmetic<T>::value>::type * = nullptr>
-    inline float2 operator / (float2 const &a, T const &b) { return a._val / static_cast<float>(b); }
+    inline float2 operator / (float2 const &a, T const &b) { return a._val.vec / static_cast<float>(b); }
 
     inline bool operator==(float2 const &a, float2 const &b) {
-        auto tmp = (__m128{a._val[0], a._val[1]} - __m128{b._val[0], b._val[1]}) < EPSILON_F;
+        auto tmp = (__m128{a._val.vec[0], a._val.vec[1]} - __m128{b._val.vec[0], b._val.vec[1]}) < EPSILON_F;
         return _mm_movemask_epi8(tmp) == 0xffff;
     }
 

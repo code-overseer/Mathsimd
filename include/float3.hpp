@@ -15,21 +15,29 @@ namespace mathsimd {
 
     struct float3 {
     private:
-        __m128 _val{0, 0, 0};
+        union F3 {
+            float f[3];
+            __m128 vec{0,0,0};
+            F3(__m128 const& other) : vec{other} { vec[3] = 0; }
+            F3(float const &x, float const &y, float const &z) : vec{x, y, z} {}
+            F3() = default;
+            F3(F3 const &other) :  vec(other.vec) {}
+        };
+        F3 _val{0, 0, 0};
     public:
         float3() = default;
         float3(float const &x, float const &y, float const &z) : _val{x, y, z} {}
-        float3(float3 const &other) : _val(other) {}
+        float3(float3 const &other) : _val(other._val) {}
         float3(__m128 const &other) : _val(other) {}
-        inline operator __m128() const { return _val; }
+        inline operator __m128() const { return _val.vec; }
         inline float3 &operator=(float3 const &other) = default;
         inline float3 &operator=(__m128 const &other) { _val = other; return *this; }
-        float &x() { return *reinterpret_cast<float*>(&_val); }
-        float &y() { return *(reinterpret_cast<float*>(&_val) + 1); }
-        float &z() { return *(reinterpret_cast<float*>(&_val) + 2); }
-        [[nodiscard]] float x() const { return _val[0]; }
-        [[nodiscard]] float y() const { return _val[1]; }
-        [[nodiscard]] float z() const { return _val[2]; }
+        float &x() { return *_val.f; }
+        float &y() { return *(_val.f + 1); }
+        float &z() { return *(_val.f + 2); }
+        [[nodiscard]] float x() const { return _val.vec[0]; }
+        [[nodiscard]] float y() const { return _val.vec[1]; }
+        [[nodiscard]] float z() const { return _val.vec[2]; }
 
         #define ARITHMETIC(OP) \
         friend float3 operator OP (float3 const &a, float3 const &b); \
@@ -51,13 +59,13 @@ namespace mathsimd {
 
         [[nodiscard]] inline float sqrMagnitude() const { return dot(*this, *this); }
         [[nodiscard]] inline float magnitude() const { return std::sqrt(sqrMagnitude()); }
-        [[nodiscard]] inline float3 normalized() const { return this->_val / magnitude(); }
+        [[nodiscard]] inline float3 normalized() const { return _val.vec / magnitude(); }
 
         static inline float3 cross(float3 const &a, float3 const &b) {
-            auto tmp0 = _mm_shuffle_ps(a._val,a._val,_MM_SHUFFLE(3,0,2,1));
-            auto tmp1 = _mm_shuffle_ps(b._val,b._val,_MM_SHUFFLE(3,1,0,2));
-            auto tmp2 = _mm_shuffle_ps(a._val,a._val,_MM_SHUFFLE(3,1,0,2));
-            auto tmp3 = _mm_shuffle_ps(b._val,b._val,_MM_SHUFFLE(3,0,2,1));
+            auto tmp0 = _mm_shuffle_ps(a._val.vec,a._val.vec,_MM_SHUFFLE(3,0,2,1));
+            auto tmp1 = _mm_shuffle_ps(b._val.vec,b._val.vec,_MM_SHUFFLE(3,1,0,2));
+            auto tmp2 = _mm_shuffle_ps(a._val.vec,a._val.vec,_MM_SHUFFLE(3,1,0,2));
+            auto tmp3 = _mm_shuffle_ps(b._val.vec,b._val.vec,_MM_SHUFFLE(3,0,2,1));
             return _mm_sub_ps(_mm_mul_ps(tmp0,tmp1),_mm_mul_ps(tmp2,tmp3));
         }
 
@@ -81,11 +89,11 @@ namespace mathsimd {
     }
 
     #define ARITHMETIC(OP) \
-        inline float3 operator OP (float3 const &a, float3 const &b) { return a._val OP b._val; } \
+        inline float3 operator OP (float3 const &a, float3 const &b) { return a._val.vec OP b._val.vec; } \
         template<typename T, typename std::enable_if<std::is_arithmetic<T>::value>::type * = nullptr> \
-        inline float3 operator OP (T const &a, float3 const &b) { return static_cast<float>(a) OP b._val; } \
+        inline float3 operator OP (T const &a, float3 const &b) { return static_cast<float>(a) OP b._val.vec; } \
         template<typename T, typename std::enable_if<std::is_arithmetic<T>::value>::type * = nullptr> \
-        inline float3 operator OP (float3 const &a, T const &b) { return a._val OP static_cast<float>(b); }
+        inline float3 operator OP (float3 const &a, T const &b) { return a._val.vec OP static_cast<float>(b); }
     ARITHMETIC(+)
     ARITHMETIC(-)
     ARITHMETIC(*)
