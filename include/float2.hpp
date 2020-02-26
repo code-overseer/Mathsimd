@@ -5,6 +5,7 @@
 #include <array>
 #include <cmath>
 #include <iostream>
+#include "constants.hpp"
 
 namespace mathsimd {
 
@@ -53,8 +54,18 @@ namespace mathsimd {
         }
 
         [[nodiscard]] inline float sqrMagnitude() const { return dot(*this, *this); }
-        [[nodiscard]] inline float magnitude() const { return std::sqrt(sqrMagnitude()); }
-        [[nodiscard]] inline float2 normalized() const { return _val.vec / magnitude(); }
+        [[nodiscard]] inline float magnitude() const { 
+            float f = sqrMagnitude(); 
+            auto v = _mm_load_ss(&f);
+            _mm_store_ss(&f, _mm_mul_ss(v, _mm_rsqrt_ss(v)));
+            return f;
+        }
+        [[nodiscard]] inline float2 normalized() const  { 
+            float f = sqrMagnitude();
+
+            auto v = _mm_mul_ss(_val.vec, _mm_permute_ps(_mm_rsqrt_ss(_mm_load_ss(&f)), 0x00));
+            return {v[0], v[1]};
+        }
 
         #define FUNC(NAME,X,Y) \
         static inline float2 NAME () { return {X,Y}; }

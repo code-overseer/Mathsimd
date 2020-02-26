@@ -58,8 +58,16 @@ namespace mathsimd {
         }
 
         [[nodiscard]] inline float sqrMagnitude() const { return dot(*this, *this); }
-        [[nodiscard]] inline float magnitude() const { return std::sqrt(sqrMagnitude()); }
-        [[nodiscard]] inline float3 normalized() const { return _val.vec / magnitude(); }
+        [[nodiscard]] inline float magnitude() const { 
+            float f = sqrMagnitude(); 
+            auto v = _mm_load_ss(&f);
+            _mm_store_ss(&f, _mm_mul_ss(v, _mm_rsqrt_ss(v)));
+            return f;
+        }
+        [[nodiscard]] inline float3 normalized() const { 
+            float f = sqrMagnitude(); 
+            return _mm_mul_ss(_val.vec, _mm_permute_ps(_mm_rsqrt_ss(_mm_load_ss(&f)), 0x00)); 
+        }
 
         static inline float3 cross(float3 const &a, float3 const &b) {
             auto tmp0 = _mm_shuffle_ps(a._val.vec,a._val.vec,_MM_SHUFFLE(3,0,2,1));
