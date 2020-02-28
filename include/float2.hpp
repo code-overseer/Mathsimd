@@ -27,23 +27,15 @@ namespace mathsimd {
 
         #define ARITHMETIC(OP) \
         friend float2 operator OP (float2 const &a, float2 const &b); \
-        template<typename T, typename std::enable_if<std::is_arithmetic<T>::value>::type *> \
-        friend float2 operator OP (T const &a, float2 const &b); \
-        template<typename T, typename std::enable_if<std::is_arithmetic<T>::value>::type *> \
-        friend float2 operator OP (float2 const &a, T const &b);
+        friend float2 operator OP (float const &a, float2 const &b); \
+        friend float2 operator OP (float2 const &a, float const &b);
         ARITHMETIC(+)
         ARITHMETIC(-)
         ARITHMETIC(*)
+        ARITHMETIC(/)
         #undef ARITHMETIC
-        template<typename T, typename std::enable_if<std::is_arithmetic<T>::value>::type *>
-        friend float2 operator / (float2 const &a, T const &b);
 
-        static float dot(float2 const &a, float2 const &b) {
-            auto ma = static_cast<__m128>(a);
-            auto mb = static_cast<__m128>(b);
-            auto c = _mm_mul_ps(ma, mb);
-            return c[0] + c[1];
-        }
+        friend float dot(float2 const &a, float2 const &b);
 
         [[nodiscard]] inline float sqrMagnitude() const { return dot(*this, *this); }
         [[nodiscard]] inline float magnitude() const { 
@@ -66,35 +58,7 @@ namespace mathsimd {
         FUNC(one, 1,1)
         FUNC(zero, 0,0)
         #undef FUNC
-
-        friend bool operator==(float2 const &a, float2 const &b);
     };
 
-#define ARITHMETIC(OP) \
-    inline float2 operator OP (float2 const &a, float2 const &b) { return static_cast<__m128>(a) OP static_cast<__m128>(b); } \
-    template<typename T, typename std::enable_if<std::is_arithmetic<T>::value>::type * = nullptr> \
-    inline float2 operator OP (T const &a, float2 const &b) { return static_cast<float>(a) OP static_cast<__m128>(b); } \
-    template<typename T, typename std::enable_if<std::is_arithmetic<T>::value>::type * = nullptr> \
-    inline float2 operator OP (float2 const &a, T const &b) { return static_cast<__m128>(a) OP static_cast<float>(b); }
-    ARITHMETIC(+)
-    ARITHMETIC(-)
-    ARITHMETIC(*)
-#undef ARITHMETIC
-
-
-    template<typename T, typename std::enable_if<std::is_arithmetic<T>::value>::type * = nullptr>
-    inline float2 operator / (float2 const &a, T const &b) { return static_cast<__m128>(a) / static_cast<float>(b); }
-
-    inline bool operator==(float2 const &a, float2 const &b) {
-        auto tmp = _mm_abs_ps(static_cast<__m128>(a) - static_cast<__m128>(b));
-        return _mm_movemask_epi8(_mm_castps_si128(tmp < EPSILON_F)) == 0xffff;
-    }
-
-    inline bool operator!=(float2 const &a, float2 const &b) { return !(a == b); }
-
-    inline std::ostream& operator << (std::ostream& stream, float2 const &input) {
-        stream << '(' << input.x() << ", " << input.y() <<')';
-        return stream;
-    }
 }
 #endif

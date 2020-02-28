@@ -25,12 +25,12 @@ namespace mathsimd {
 
         template<>
         inline float3 rnd_vec<float3>(bool zeroX, bool zeroY, bool zeroZ) {
-            return {get<float>() * !zeroX, get<float>() * !zeroY,get<float>() * !zeroZ};
+            return {rnd<float>() * !zeroX, rnd<float>() * !zeroY,rnd<float>() * !zeroZ};
         }
 
         template<>
         inline float2 rnd_vec<float2>(bool zeroX, bool zeroY, bool zeroZ) {
-            return {get<float>() * !zeroX, get<float>() * !zeroY};
+            return {rnd<float>() * !zeroX, rnd<float>() * !zeroY};
         }
     };
 }

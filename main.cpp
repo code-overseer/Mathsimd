@@ -10,6 +10,7 @@ int main() {
         mathtests::test_float3_cross();
         mathtests::test_float4_cross();
         mathtests::test_float4x4_matmul();
+        mathtests::test_float4x4_vecmul();
     }
 
 

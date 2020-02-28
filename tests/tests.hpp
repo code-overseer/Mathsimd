@@ -18,6 +18,7 @@ namespace mathtests {
     void test_float4_dot();
 
     void test_float4x4_matmul();
+    void test_float4x4_vecmul();
 
     void test_float4_cross();
 
