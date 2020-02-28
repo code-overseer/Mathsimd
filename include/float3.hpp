@@ -57,6 +57,7 @@ namespace mathsimd {
             auto f = sqrMagnitude();
             return _mm_mul_ps( *this, _mm_rsqrt_ps(_mm_load_ps1(&f)) );
         }
+        
 
         static inline float3 cross(float3 const &a, float3 const &b) {
             auto tmp0 = _mm_shuffle_ps(a,a,_MM_SHUFFLE(3,0,2,1));
@@ -79,12 +80,6 @@ namespace mathsimd {
         #undef FUNC
     };
 
-    inline __m128 _mm_abs_ps(__m128 fp_val) {
-        static const __m128i NEG{0x7fffffff7fffffff,0x7fffffff7fffffff};
-        auto tmp = _mm_and_si128(_mm_castps_si128(fp_val), NEG);
-        return _mm_castsi128_ps(tmp);
-    }
-
     #define ARITHMETIC(OP) \
         inline float3 operator OP (float3 const &a, float3 const &b) { return static_cast<__m128>(a) OP static_cast<__m128>(b); } \
         template<typename T, typename std::enable_if<std::is_arithmetic<T>::value>::type * = nullptr> \
@@ -99,9 +94,8 @@ namespace mathsimd {
     inline float3 operator / (float3 const &a, T const &b) { return static_cast<__m128>(a) / static_cast<float>(b); }
 
     inline bool operator==(float3 const &a, float3 const &b) {
-        auto tmp = _mm_abs_epi32(_mm_castps_si128((static_cast<__m128>(a) - static_cast<__m128>(b))));
-        tmp = _mm_castps_si128(_mm_castsi128_ps(tmp) < EPSILON_F);
-        return _mm_movemask_epi8(tmp) == 0xffff;
+        auto tmp = _mm_abs_ps(static_cast<__m128>(a) - static_cast<__m128>(b));
+        return _mm_movemask_epi8(_mm_castps_si128(tmp < EPSILON_F)) == 0xffff;
     }
 
     inline bool operator!=(float3 const &a, float3 const &b) { return !(a == b); }

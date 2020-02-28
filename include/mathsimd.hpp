@@ -6,4 +6,5 @@
 #include "float4.hpp"
 #include "float4x4.hpp"
 
+
 #endif //MATHEMATICS_MATHSIMD_HPP

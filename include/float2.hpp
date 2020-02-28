@@ -8,8 +8,6 @@
 #include "constants.hpp"
 
 namespace mathsimd {
-
-
     struct float2 {
     private:
         alignas(8) float _val[2]{0.f, 0.f};
@@ -19,7 +17,7 @@ namespace mathsimd {
         inline operator __m128() const { return _mm_castsi128_ps(_mm_loadu_si64(_val)); }
         inline operator float const*() const { return _val; }
         float2(float2 const &other) { memcpy(_val, other._val, 2 * sizeof(float) );}
-        float2(__m128 const &other) { _mm_storeu_epi64(_val, _mm_castps_si128(other)); }
+        float2(__m128 const &other) { _mm_storeu_si64(_val, _mm_castps_si128(other)); }
         inline float2 &operator=(float2 const &other) = default;
         inline float2 &operator=(__m128 const &other) { _mm_storeu_si64(_val, _mm_castps_si128(other)); return *this; }
         float &x() { return _val[0]; }
@@ -88,9 +86,8 @@ namespace mathsimd {
     inline float2 operator / (float2 const &a, T const &b) { return static_cast<__m128>(a) / static_cast<float>(b); }
 
     inline bool operator==(float2 const &a, float2 const &b) {
-        auto tmp = _mm_abs_epi32(_mm_castps_si128((static_cast<__m128>(a) - static_cast<__m128>(b))));
-        tmp = _mm_castps_si128(_mm_castsi128_ps(tmp) < EPSILON_F);
-        return _mm_movemask_epi8(tmp) == 0xffff;
+        auto tmp = _mm_abs_ps(static_cast<__m128>(a) - static_cast<__m128>(b));
+        return _mm_movemask_epi8(_mm_castps_si128(tmp < EPSILON_F)) == 0xffff;
     }
 
     inline bool operator!=(float2 const &a, float2 const &b) { return !(a == b); }

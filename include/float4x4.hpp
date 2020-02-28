@@ -29,7 +29,6 @@ namespace mathsimd {
         float4x4(__m128 const &c0, __m128 const &c1, __m128 const &c2, __m128 const &c3) : _val(c0,c1,c2,c3) {}
         float4x4(__m256 const &a, __m256 const &b) : _val(a,b) {}
         inline operator __m256 const*() const { return _val.x2cols; }
-        inline operator __m128 const*() const { return _val.cols; }
         inline float const* operator[](int i) const { return _val.f[i]; }
         inline operator float const*() const { return _val.f[0]; }
 
