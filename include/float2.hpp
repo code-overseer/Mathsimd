@@ -14,6 +14,7 @@ namespace mathsimd {
     public:
         float2() = default;
         float2(float const &x, float const &y) : _val{x, y} {}
+        float2(float const* other) { memcpy(_val, other, 2 * sizeof(float)); }
         inline operator __m128() const { return _mm_castsi128_ps(_mm_loadu_si64(_val)); }
         inline operator float const*() const { return _val; }
         float2(float2 const &other) { memcpy(_val, other._val, 2 * sizeof(float) );}

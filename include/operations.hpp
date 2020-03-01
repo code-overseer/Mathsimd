@@ -15,10 +15,18 @@ namespace mathsimd {
     inline TYPE operator OP (float const &a, TYPE const &b) { return a OP static_cast<__m128>(b); } \
     inline TYPE operator OP (TYPE const &a, float const &b) { return static_cast<__m128>(a) OP b; }
 
+#define FAST_DIVISION(TYPE) \
+    inline TYPE fast_div (TYPE const &a, float const &b) { return static_cast<__m128>(a) * _mm_rcp_ps(_mm_load_ps1(&b)); } \
+    inline TYPE fast_div (float const &a, TYPE const &b) { return _mm_load_ps1(&a) * _mm_rcp_ps(static_cast<__m128>(b)); } \
+    inline TYPE fast_div (TYPE const &a, TYPE const &b) { return static_cast<__m128>(a) * _mm_rcp_ps(static_cast<__m128>(b)); }
+
+#define RECIPROCAL(TYPE) \
+    inline TYPE reciprocal(TYPE const &a) { return _mm_rcp_ps(static_cast<__m128>(a)); } \
+
 #define DIVISION(TYPE) \
-    inline TYPE operator / (TYPE const &a, float const &b) { return static_cast<__m128>(a) * _mm_rcp_ps(_mm_load_ps1(&b)); } \
-    inline TYPE operator / (float const &a, TYPE const &b) { return _mm_load_ps1(&a) * _mm_rcp_ps(static_cast<__m128>(b)); } \
-    inline TYPE operator / (TYPE const &a, TYPE const &b) { return static_cast<__m128>(a) * _mm_rcp_ps(static_cast<__m128>(b)); }
+ inline TYPE operator / (TYPE const &a, float const &b) { return static_cast<__m128>(a) / _mm_load_ps1(&b); } \
+ inline TYPE operator / (float const &a, TYPE const &b) { return _mm_load_ps1(&a) / static_cast<__m128>(b); } \
+ inline TYPE operator / (TYPE const &a, TYPE const &b) { return static_cast<__m128>(a) / static_cast<__m128>(b); }
 
 #define EQUALITY_CHECK(TYPE) \
     inline bool operator==(TYPE const &a, TYPE const &b) { \
@@ -32,7 +40,9 @@ ARITHMETIC(TYPE, +) \
 ARITHMETIC(TYPE, -) \
 ARITHMETIC(TYPE, *) \
 DIVISION(TYPE) \
-EQUALITY_CHECK(TYPE)
+FAST_DIVISION(TYPE) \
+EQUALITY_CHECK(TYPE) \
+RECIPROCAL(TYPE)
 
     SIMD_OPS(float2)
     SIMD_OPS(float3)
@@ -42,6 +52,8 @@ EQUALITY_CHECK(TYPE)
 #undef EQUALITY_CHECK
 #undef DIVISION
 #undef ARITHMETIC
+#undef FAST_DIVISION
+#undef RECIPROCAL
 
     inline std::ostream &operator<<(std::ostream &stream, mathsimd::float2 const &input) {
         stream << '(' << input.x() << ", " << input.y() << ')';
@@ -113,27 +125,44 @@ EQUALITY_CHECK(TYPE)
     /* float4x4 operations */
     #define ARITHMETIC(OP) \
         inline float4x4 operator OP (float4x4 const &a, float4x4 const &b) { \
-            return float4x4(a._val.x2cols[0] OP b._val.x2cols[0], a._val.x2cols[1] OP b._val.x2cols[1]); \
+            __m256 l[2]{_mm256_loadu_ps(a._val), _mm256_loadu_ps(a._val + 8)}; \
+            __m256 r[2]{_mm256_loadu_ps(b._val), _mm256_loadu_ps(b._val + 8)}; \
+            return float4x4(l[0] OP r[0], l[1] OP r[1]); \
         } \
         inline float4x4 operator OP (float const &a, float4x4 const &b) { \
-            return float4x4(static_cast<float>(a) OP b._val.x2cols[0], static_cast<float>(a) OP b._val.x2cols[1]); \
+            __m256 r[2]{_mm256_loadu_ps(b._val), _mm256_loadu_ps(b._val + 8)}; \
+            __m256 l = _mm256_broadcast_ss(&a); \
+            return float4x4(l OP r[0], l OP r[1]); \
         } \
         inline float4x4 operator OP (float4x4 const &a, float const &b) { \
-            return float4x4(a._val.x2cols[0] OP static_cast<float>(b), a._val.x2cols[1] OP static_cast<float>(b)); \
+            __m256 l[2]{_mm256_loadu_ps(a._val), _mm256_loadu_ps(a._val + 8)}; \
+            __m256 r = _mm256_broadcast_ss(&b); \
+            return float4x4(l[0] OP r, l[1] OP r); \
         }
     ARITHMETIC(+)
     ARITHMETIC(-)
     ARITHMETIC(*)
     #undef ARITHMETIC
     inline float4x4 operator / (float4x4 const &a, float const &b) {
-        auto const &m = a._val.x2cols;
-        auto mb = _mm256_load_ps(&b);
-        return float4x4(_mm256_mul_ps(m[0], _mm256_rcp_ps(mb)), _mm256_mul_ps(m[1], _mm256_rcp_ps(mb)));
+        __m256 m[2]{_mm256_loadu_ps(a._val), _mm256_loadu_ps(a._val + 8)};
+        auto mb = _mm256_broadcast_ss(&b);
+        return float4x4(_mm256_div_ps(m[0], mb), _mm256_div_ps(m[1], mb));
+    }
+
+    inline float4x4 fast_div(float4x4 const &a, float const &b) {
+        __m256 m[2]{_mm256_loadu_ps(a._val), _mm256_loadu_ps(a._val + 8)};
+        auto mb = _mm256_rcp_ps(_mm256_broadcast_ss(&b));
+        return float4x4(_mm256_mul_ps(m[0], mb), _mm256_mul_ps(m[1], mb));
+    }
+
+    inline float4x4 reciprocal(float4x4 const &a) {
+        __m256 m[2]{_mm256_loadu_ps(a._val), _mm256_loadu_ps(a._val + 8)};
+        return float4x4(_mm256_rcp_ps(m[0]), _mm256_rcp_ps(m[1]));
     }
 
     inline float4x4 matmul(float4x4 const &a, float4x4 const &b) {
-        auto const& l = a._val.cols;
-        auto const& r = b._val.x2cols;
+        __m128 const l[4]{_mm_load_ps(a._val), _mm_load_ps(a._val + 4), _mm_load_ps(a._val + 8), _mm_load_ps(a._val + 12)};
+        __m256 const r[2]{_mm256_loadu_ps(b._val), _mm256_loadu_ps(b._val + 8)};
         __m256 out0;
         out0 = _mm256_mul_ps(_mm256_permute_ps(r[0], 0x00), _mm256_broadcast_ps(l));
         out0 = _mm256_add_ps(out0, _mm256_mul_ps(_mm256_permute_ps(r[0], 0x55), _mm256_broadcast_ps(l + 1)));
@@ -150,12 +179,13 @@ EQUALITY_CHECK(TYPE)
     }
 
     inline float4 matmul(float4x4 const &a, float4 const &b) {
-            __m128 tmp = static_cast<__m128>(b);
+        __m256 l[2]{_mm256_loadu_ps(a._val), _mm256_loadu_ps(a._val + 8)};
+        __m128 tmp = static_cast<__m128>(b);
         __m256 b0 = _mm256_broadcast_ps(&tmp);
         __m256 b1 = _mm256_permutevar_ps(b0, __m256i{-6148914691236517206,-6148914691236517206,-1,-1});
         b0 = _mm256_permutevar_ps(b0, __m256i{0,0,0x5555555555555555,0x5555555555555555});
-        b0 = _mm256_mul_ps(a._val.x2cols[0], b0);
-        b1 = _mm256_mul_ps(a._val.x2cols[1], b1);
+        b0 = _mm256_mul_ps(l[0], b0);
+        b1 = _mm256_mul_ps(l[1], b1);
         b0 = _mm256_add_ps(b0,b1);
         b1 = _mm256_permute2f128_ps(b0,b0,0x41);
         b0 = _mm256_add_ps(b0,b1);

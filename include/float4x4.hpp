@@ -12,34 +12,33 @@ namespace mathsimd {
 
 	struct float4x4 {
 	private:
-	    union M4x4 {
-	        float f[4][4];
-	        __m128 cols[4]{__m128{0,0,0,0},__m128{0,0,0,0},__m128{0,0,0,0},__m128{0,0,0,0}};
-            __m256 x2cols[2];
-	        M4x4(__m256 const&a, __m256 const &b) : x2cols{a, b} {};
-            M4x4(__m128 const&c0, __m128 const &c1, __m128 const &c2, __m128 const &c3) : cols{c0, c1, c2, c3} {};
-            M4x4() = default;
-            M4x4(M4x4 const& other) : x2cols{other.x2cols[0], other.x2cols[1]} {}
-	    };
-		M4x4 _val;
+        alignas(16) float _val[16]{0.f, 0.f, 0.f, 0.f,0.f, 0.f, 0.f, 0.f,0.f, 0.f, 0.f, 0.f,0.f, 0.f, 0.f, 0.f};
 	public:
 		float4x4() = default;
-        float4x4(float4x4 const &other) : _val(other._val) {}
-        float4x4(float4 const &c0, float4 const &c1, float4 const &c2, float4 const &c3) : _val(c0,c1,c2,c3) {}
-        float4x4(__m128 const &c0, __m128 const &c1, __m128 const &c2, __m128 const &c3) : _val(c0,c1,c2,c3) {}
-        float4x4(__m256 const &a, __m256 const &b) : _val(a,b) {}
-        inline operator __m256 const*() const { return _val.x2cols; }
-        inline float const* operator[](int i) const { return _val.f[i]; }
-        inline operator float const*() const { return _val.f[0]; }
+        float4x4(float4x4 const &other)  { memcpy(_val, other._val, 16 * sizeof(float)); }
+        float4x4(float4 const &c0, float4 const &c1, float4 const &c2, float4 const &c3) {
+            memcpy(_val, c0, 4 * sizeof(float));
+            memcpy(_val + 4, c1, 4 * sizeof(float));
+            memcpy(_val + 8, c2, 4 * sizeof(float));
+            memcpy(_val + 12, c3, 4 * sizeof(float));
+        }
+        float4x4(__m128 const &c0, __m128 const &c1, __m128 const &c2, __m128 const &c3) {
+            _mm_store_ps(_val, c0);
+            _mm_store_ps(_val + 4, c1);
+            _mm_store_ps(_val + 8, c2);
+            _mm_store_ps(_val + 12, c3);
+        }
+        float4x4(__m256 const &a, __m256 const &b) {
+            _mm256_storeu_ps(_val, a);
+            _mm256_storeu_ps(_val + 8, b);
+        }
+        inline float const* operator[](int i) const { return _val + 4 * i; }
+        inline operator float const*() const { return _val; }
 
-        __m128 &c0() { return _val.cols[0]; }
-        __m128 &c1() { return _val.cols[1]; }
-        __m128 &c2() { return _val.cols[2]; }
-        __m128 &c3() { return _val.cols[3]; }
-        float4 c0() const { return _val.cols[0]; }
-        float4 c1() const { return _val.cols[1]; }
-        float4 c2() const { return _val.cols[2]; }
-        float4 c3() const { return _val.cols[3]; }
+        float4 c0() const { return float4(_val); }
+        float4 c1() const { return float4(_val + 4); }
+        float4 c2() const { return float4(_val + 8); }
+        float4 c3() const { return float4(_val + 12); }
 
         #define ARITHMETIC(OP) \
         friend float4x4 operator OP (float4x4 const &a, float4x4 const &b); \
@@ -50,6 +49,8 @@ namespace mathsimd {
         ARITHMETIC(*)
         #undef ARITHMETIC
         friend float4x4 operator / (float4x4 const &a, float const &b);
+        friend float4x4 fast_div(float4x4 const &a, float const &b);
+        friend float4x4 reciprocal(float4x4 const &a);
 
         friend float4x4 matmul(float4x4 const &a, float4x4 const &b);
         friend float4 matmul(float4x4 const &a, float4 const &b);

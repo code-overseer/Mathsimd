@@ -17,7 +17,9 @@ namespace mathsimd {
         float4() = default;
         float4(float const &x, float const &y, float const &z, float const &w) : _val{x, y, z, w} {}
         float4(float4 const &other) { memcpy(_val, other._val, 4 * sizeof(float)); }
+        float4(float const* other) { memcpy(_val, other, 4 * sizeof(float)); }
         float4(__m128 const &other) { _mm_store_ps(_val, other); }
+        inline operator float const*() const { return _val; }
         inline operator __m128() const { return _mm_load_ps(_val); }
         inline float4 &operator=(float4 const &other) = default;
         inline float4 &operator=(__m128 const &other) { _mm_store_ps(_val, other); return *this; }
@@ -68,6 +70,7 @@ namespace mathsimd {
         FUNC(out, 0,0,0,-1)
         FUNC(one, 1,1,1,1)
         FUNC(zero, 0,0,0,0)
+        FUNC(origin, 0,0,0,1)
         #undef FUNC
     };
 }

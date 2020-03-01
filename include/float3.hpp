@@ -16,8 +16,10 @@ namespace mathsimd {
     public:
         float3() = default;
         float3(float const &x, float const &y, float const &z) : _val{x, y, z} {}
+        float3(float const* other) { memcpy(_val, other, 3 * sizeof(float)); }
         float3(float3 const &other) { memcpy(_val, other._val, 3 * sizeof(float)); }
         float3(__m128 const &other) { _mm_store_ps(_val, other); }
+        inline operator float const*() const { return _val; }
         inline operator __m128() const { return _mm_load_ps(_val); }
         inline float3 &operator=(float3 const &other) = default;
         inline float3 &operator=(__m128 const &other) { _mm_store_ps(_val, other); return *this; }
