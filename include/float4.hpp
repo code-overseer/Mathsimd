@@ -7,6 +7,9 @@
 #include <cstdio>
 #include <iostream>
 #include "constants.hpp"
+#include "float2.hpp"
+#include "float3.hpp"
+
 
 namespace mathsimd {
 
@@ -16,6 +19,11 @@ namespace mathsimd {
     public:
         float4() = default;
         float4(float const &x, float const &y, float const &z, float const &w) : _val{x, y, z, w} {}
+        float4(float const &x, float3 const &yzw) : _val{x, yzw.x(), yzw.y(), yzw.z()} {}
+        float4(float3 const &xyz, float const &w) : _val{yzw.x(), yzw.y(), yzw.z(), w} {}
+        float4(float const &x, float const &y, float2 const &zw) : _val{x, y, zw.x(), zw.y()} {}
+        float4(float2 const &xy, float const &z, float const &w) : _val{xy.x(), xy.y(), z, w} {}
+        float4(float const &x, float2 const &yz, float const &w) : _val{x, yz.x(), yz.y(), w} {}
         float4(float4 const &other) { memcpy(_val, other._val, 4 * sizeof(float)); }
         float4(float const* other) { memcpy(_val, other, 4 * sizeof(float)); }
         float4(__m128 const &other) { _mm_store_ps(_val, other); }

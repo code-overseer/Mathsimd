@@ -16,6 +16,8 @@ namespace mathsimd {
     public:
         float3() = default;
         float3(float const &x, float const &y, float const &z) : _val{x, y, z} {}
+        float3(float2 const &xy, float const &z) : _val{xy.x(), xy.y(), z} {}
+        float3(float const &x, float2 const &yz) : _val{x, yz.x(), yz.y()} {}
         float3(float const* other) { memcpy(_val, other, 3 * sizeof(float)); }
         float3(float3 const &other) { memcpy(_val, other._val, 3 * sizeof(float)); }
         float3(__m128 const &other) { _mm_store_ps(_val, other); }
