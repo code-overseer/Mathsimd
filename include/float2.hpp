@@ -50,6 +50,16 @@ namespace mathsimd {
             return _mm_mul_ps( *this, _mm_rsqrt_ps(_mm_load_ps1(&fl)) );
         }
 
+        static inline float2 minimum(float2 const& l, float2 const & r) {
+            auto c = _mm_cmplt_ps(l, r);
+            return _mm_or_ps(_mm_and_ps(c,l), _mm_andnot_ps(c,r));
+        }
+
+        static inline float2 maximum(float2 const& l, float2 const & r) {
+            auto c = _mm_cmpgt_ps(l, r);
+            return _mm_or_ps(_mm_and_ps(c,l), _mm_andnot_ps(c,r));
+        }
+
         #define FUNC(NAME,X,Y) \
         static inline float2 NAME () { return {X,Y}; }
         FUNC(up, 0,1)
