@@ -50,6 +50,15 @@ namespace mathsimd {
         ARITHMETIC(/)
         #undef ARITHMETIC
 
+        inline float4 sign() const {
+            __m128 zero = _mm_setzero_ps();
+
+            __m128 positive = _mm_and_ps(_mm_cmpgt_ps(*this, zero), _mm_set1_ps(1.0f));
+            __m128 negative = _mm_and_ps(_mm_cmplt_ps(*this, zero), _mm_set1_ps(-1.0f));
+
+            return _mm_or_ps(positive, negative);
+        }
+
         friend float dot(float4 const &a, float4 const &b);
 
         [[nodiscard]] inline float sqrMagnitude() const { return dot(*this, *this); }

@@ -55,6 +55,15 @@ namespace mathsimd {
             auto f = sqrMagnitude();
             return _mm_mul_ps( *this, _mm_rsqrt_ps(_mm_load_ps1(&f)) );
         }
+
+        inline float3 sign() const {
+            __m128 zero = _mm_setzero_ps();
+
+            __m128 positive = _mm_and_ps(_mm_cmpgt_ps(*this, zero), _mm_set1_ps(1.0f));
+            __m128 negative = _mm_and_ps(_mm_cmplt_ps(*this, zero), _mm_set1_ps(-1.0f));
+
+            return _mm_or_ps(positive, negative);
+        }
         
 
         friend float3 cross(float3 const &a, float3 const &b);

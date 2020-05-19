@@ -14,7 +14,12 @@ static float rnd() {
 static unsigned int rnd_idx() {
     return static_cast<unsigned int>(std::time(nullptr)) % VALUES;
 }
-
+void mathtests::test_float2_sign() {
+    mathsimd::float2 f(-2,3);
+    mathsimd::float2 g(2,-3);
+    mathsimd::float2 h(0,0);
+    std::cout<<f.sign()<<g.sign()<<h.sign()<<std::endl;
+}
 void mathtests::test_float2_dot() {
     using namespace mathsimd;
     float ref_a[2], ref_b[2];

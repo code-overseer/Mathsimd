@@ -15,6 +15,8 @@ namespace mathtests {
 
     void test_float2_dot();
 
+    void test_float2_sign();
+
     void test_float4_dot();
 
     void test_float4x4_matmul();
