@@ -2,10 +2,6 @@
 #define MATHEMATICS_SIMD_FLOAT4_HPP
 
 #include <immintrin.h>
-#include <utility>
-#include <cmath>
-#include <cstdio>
-#include <iostream>
 #include "constants.hpp"
 #include "float2.hpp"
 #include "float3.hpp"
@@ -24,8 +20,8 @@ namespace mathsimd {
         float4(float const &x, float const &y, float2 const &zw) : _val{x, y, zw.x(), zw.y()} {}
         float4(float2 const &xy, float const &z, float const &w) : _val{xy.x(), xy.y(), z, w} {}
         float4(float const &x, float2 const &yz, float const &w) : _val{x, yz.x(), yz.y(), w} {}
-        float4(float4 const &other) { memcpy(_val, other._val, 4 * sizeof(float)); }
-        float4(float const* other) { memcpy(_val, other, 4 * sizeof(float)); }
+        float4(float4 const &other) { _mm_store_ps(dst, _mm_load_ps(src)); }
+        float4(float const* other) { _mm_storeu_ps(dst, _mm_loadu_ps(src));}
         float4(__m128 const &other) { _mm_store_ps(_val, other); }
         inline operator float const*() const { return _val; }
         inline operator __m128() const { return _mm_load_ps(_val); }

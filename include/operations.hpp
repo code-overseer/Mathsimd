@@ -72,22 +72,26 @@ RECIPROCAL(TYPE)
 
 
     inline float dot(float2 const &a, float2 const &b) {
+        float f;
         auto c = _mm_mul_ps(static_cast<__m128>(a), static_cast<__m128>(b));
-        return c[0] + c[1];
+        c = _mm_add_ss(c, _mm_permute_ps(c, _MM_SHUFFLE(2,3,0,1)));
+        _mm_store_ss(&f,c);
+        return f;
     }
 
     inline float dot(float3 const &a, float3 const &b) {
         float f;
         auto c = _mm_mul_ps(static_cast<__m128>(a), static_cast<__m128>(b));
-        _mm_store_ss(&f, _mm_add_ss(_mm_add_ss(c, _mm_shuffle_ps(c,c,85)), _mm_unpackhi_ps(c,c)));
+        c = _mm_add_ps(c, _mm_permute_ps(c, _MM_SHUFFLE(1,0,3,2)));
+        _mm_store_ss(&f, _mm_add_ss(c, _mm_permute_ps(c, _MM_SHUFFLE(2,3,0,1))));
         return f;
     }
 
     inline float dot(float4 const &a, float4 const &b) {
         float f;
         auto c = _mm_mul_ps(static_cast<__m128>(a), static_cast<__m128>(b));
-        auto tmp = _mm_add_ps(c, _mm_permute_ps(c, 78));
-        _mm_store_ss(&f, _mm_add_ss(tmp, _mm_permute_ps(tmp, 85)));
+        c = _mm_add_ps(c, _mm_permute_ps(c, _MM_SHUFFLE(1,0,3,2)));
+        _mm_store_ss(&f, _mm_add_ss(c, _mm_permute_ps(c, _MM_SHUFFLE(2,3,0,1))));
         return f;
     }
 
@@ -109,7 +113,7 @@ RECIPROCAL(TYPE)
         auto tmp1 = _mm_permute_ps(b,mask1);
         auto tmp2 = _mm_permute_ps(a,mask1);
         auto tmp3 = _mm_permute_ps(b,mask0);
-        return _mm_sub_ps(_mm_mul_ps(tmp0,tmp1),_mm_mul_ps(tmp2,tmp3));
+        return _mm_fmsub_ps(tmp0, tmp1, _mm_mul_ps(tmp2,tmp3));
     }
 
     inline float3 cross(float3 const &a, float3 const &b) {
@@ -119,7 +123,7 @@ RECIPROCAL(TYPE)
         auto tmp1 = _mm_permute_ps(b,mask1);
         auto tmp2 = _mm_permute_ps(a,mask1);
         auto tmp3 = _mm_permute_ps(b,mask0);
-        return _mm_sub_ps(_mm_mul_ps(tmp0,tmp1),_mm_mul_ps(tmp2,tmp3));
+        return _mm_fmsub_ps(tmp0, tmp1, _mm_mul_ps(tmp2,tmp3));;
     }
 
     /* float4x4 operations */

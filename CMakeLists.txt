@@ -9,4 +9,8 @@ if (APPLE)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mmacosx-version-min=10.14")
 endif()
 
-add_executable(Mathematics main.cpp tests/tests.cpp src.cpp include/random.hpp include/operations.hpp)
+add_executable(Mathematics 
+    main.cpp 
+    tests/tests.cpp 
+    include/random.hpp 
+    include/operations.hpp)

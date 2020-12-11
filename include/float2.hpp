@@ -2,9 +2,6 @@
 #define MATHEMATICS_SIMD_FLOAT2_HPP
 
 #include <immintrin.h>
-#include <array>
-#include <cmath>
-#include <iostream>
 #include "constants.hpp"
 
 namespace mathsimd {

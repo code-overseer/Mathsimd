@@ -3,9 +3,7 @@
 
 #include <immintrin.h>
 #include <utility>
-#include <cmath>
-#include <cstdio>
-#include <iostream>
+
 #include "constants.hpp"
 
 namespace mathsimd {
@@ -18,8 +16,8 @@ namespace mathsimd {
         float3(float const &x, float const &y, float const &z) : _val{x, y, z} {}
         float3(float2 const &xy, float const &z) : _val{xy.x(), xy.y(), z} {}
         float3(float const &x, float2 const &yz) : _val{x, yz.x(), yz.y()} {}
-        float3(float const* other) { memcpy(_val, other, 3 * sizeof(float)); }
-        float3(float3 const &other) { memcpy(_val, other._val, 3 * sizeof(float)); }
+        float3(float const* other) { _mm_storeu_ps(dst, _mm_loadu_ps(src)); }
+        float3(float3 const &other) { _mm_store_ps(dst, _mm_load_ps(src)); }
         float3(__m128 const &other) { _mm_store_ps(_val, other); }
         inline operator float const*() const { return _val; }
         inline operator __m128() const { return _mm_load_ps(_val); }
