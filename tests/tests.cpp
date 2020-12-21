@@ -1,6 +1,12 @@
 #include "tests.hpp"
 #include <numeric>
 #include <iostream>
+#include <array>
+#include <ctime>
+#include <cmath>
+#include <cassert>
+#include <iostream>
+#include <chrono>
 constexpr unsigned int TESTS = 1000000u;
 constexpr unsigned int VALUES = 100u;
 constexpr int SEED = 1234;
@@ -57,7 +63,7 @@ void mathtests::test_float4_cross() {
                     ref_a[0]*ref_b[1] - ref_a[1]*ref_b[0],
                     ref_a[3]*ref_b[3] - ref_a[3]*ref_b[3]);
     auto actual = cross(a, b);
-    assert(actual == expected);
+    assert((actual == expected).all_true());
 }
 
 void mathtests::test_float3_dot() {
@@ -81,7 +87,7 @@ void mathtests::test_float3_cross() {
                     ref_a[2]*ref_b[0] - ref_a[0]*ref_b[2],
                     ref_a[0]*ref_b[1] - ref_a[1]*ref_b[0]);
     auto actual = cross(a, b);
-    assert(actual == expected);
+    assert((actual == expected).all_true());
 }
 
 using M44 = std::array<std::array<float,4>,4>;
@@ -140,7 +146,7 @@ void mathtests::test_float4x4_vecmul() {
 
     auto tmp = float4(_mm_loadu_ps(ref_out));
 
-    assert(tmp == out);
+    assert((tmp == out).all_true());
 }
 
 static std::array<mathsimd::float3,VALUES>& generate_simd_vectors() {

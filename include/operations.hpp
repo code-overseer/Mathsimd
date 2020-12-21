@@ -4,12 +4,16 @@
 #include "float3.hpp"
 #include "float4.hpp"
 #include "float4x4.hpp"
+#include "bool.hpp"
+#include <iostream>
 namespace mathsimd {
-    inline __m128 _mm_abs_ps(__m128 fp_val) {
-        static const __m128i NEG{0x7fffffff7fffffff,0x7fffffff7fffffff};
-        auto tmp = _mm_and_si128(_mm_castps_si128(fp_val), NEG);
-        return _mm_castsi128_ps(tmp);
+
+    inline __m128 _mm_abs_ps(__m128 fp_val) 
+    {
+        __m128 mask = _mm_castsi128_ps(_mm_set1_epi32(((1 << 30) - 1) << 1) + 1);
+        return _mm_and_ps(fp_val, mask);
     }
+
 #define ARITHMETIC(TYPE, OP) \
     inline TYPE operator OP (TYPE const &a, TYPE const &b) { return static_cast<__m128>(a) OP static_cast<__m128>(b); } \
     inline TYPE operator OP (float const &a, TYPE const &b) { return a OP static_cast<__m128>(b); } \
@@ -28,12 +32,12 @@ namespace mathsimd {
  inline TYPE operator / (float const &a, TYPE const &b) { return _mm_load_ps1(&a) / static_cast<__m128>(b); } \
  inline TYPE operator / (TYPE const &a, TYPE const &b) { return static_cast<__m128>(a) / static_cast<__m128>(b); }
 
-#define EQUALITY_CHECK(TYPE) \
-    inline bool operator==(TYPE const &a, TYPE const &b) { \
+#define EQUALITY_CHECK(SZ) \
+    inline Bool<SZ> operator==(float ## SZ const &a, float ## SZ const &b) { \
         auto tmp = _mm_abs_ps(static_cast<__m128>(a) - static_cast<__m128>(b)); \
-        return _mm_movemask_epi8(_mm_castps_si128(tmp < EPSILON_F)) == 0xffff; \
+        return {_mm_movemask_ps(tmp < _mm_set1_ps(EPSILON_F))}; \
     } \
-    inline bool operator!=(TYPE const &a, TYPE const &b) { return !(a == b); }
+    inline Bool<SZ> operator!=(float ## SZ const &a, float ## SZ const &b) { return !(a == b); }
 
 #define SIMD_OPS(TYPE) \
 ARITHMETIC(TYPE, +) \
@@ -41,12 +45,14 @@ ARITHMETIC(TYPE, -) \
 ARITHMETIC(TYPE, *) \
 DIVISION(TYPE) \
 FAST_DIVISION(TYPE) \
-EQUALITY_CHECK(TYPE) \
 RECIPROCAL(TYPE)
 
     SIMD_OPS(float2)
     SIMD_OPS(float3)
     SIMD_OPS(float4)
+    EQUALITY_CHECK(2)
+    EQUALITY_CHECK(3)
+    EQUALITY_CHECK(4)
 
 #undef SIMD_OPS
 #undef EQUALITY_CHECK
@@ -83,7 +89,7 @@ RECIPROCAL(TYPE)
         float f;
         auto c = _mm_mul_ps(static_cast<__m128>(a), static_cast<__m128>(b));
         c = _mm_add_ps(c, _mm_permute_ps(c, _MM_SHUFFLE(1,0,3,2)));
-        _mm_store_ss(&f, _mm_add_ss(c, _mm_permute_ps(c, _MM_SHUFFLE(2,3,0,1))));
+        _mm_store_ss(&f, _mm_add_ss(c, _mm_permute_ps(c, _MM_SHUFFLE(1,3,0,1))));
         return f;
     }
 

@@ -1,11 +1,6 @@
 #ifndef MATHEMATICS_TESTS_HPP
 #define MATHEMATICS_TESTS_HPP
 #include "../include/mathsimd.hpp"
-#include <array>
-#include <ctime>
-#include <cmath>
-#include <iostream>
-#include <chrono>
 
 namespace mathtests {
 
@@ -27,8 +22,6 @@ namespace mathtests {
     void benchmark_simd_dot();
 
     void benchmark_simd_cross();
-
-
 }
 
 #endif //MATHEMATICS_TESTS_HPP

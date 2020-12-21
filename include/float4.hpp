@@ -20,8 +20,8 @@ namespace mathsimd {
         float4(float const &x, float const &y, float2 const &zw) : _val{x, y, zw.x(), zw.y()} {}
         float4(float2 const &xy, float const &z, float const &w) : _val{xy.x(), xy.y(), z, w} {}
         float4(float const &x, float2 const &yz, float const &w) : _val{x, yz.x(), yz.y(), w} {}
-        float4(float4 const &other) { _mm_store_ps(dst, _mm_load_ps(src)); }
-        float4(float const* other) { _mm_storeu_ps(dst, _mm_loadu_ps(src));}
+        float4(float4 const &other) { _mm_store_ps(_val, _mm_load_ps(other._val)); }
+        float4(float const* other) { _mm_storeu_ps(_val, _mm_loadu_ps(other));}
         float4(__m128 const &other) { _mm_store_ps(_val, other); }
         inline operator float const*() const { return _val; }
         inline operator __m128() const { return _mm_load_ps(_val); }
@@ -48,9 +48,9 @@ namespace mathsimd {
 
         inline float4 sign() const {
             __m128 zero = _mm_setzero_ps();
-
-            __m128 positive = _mm_and_ps(_mm_cmpgt_ps(*this, zero), _mm_set1_ps(1.0f));
-            __m128 negative = _mm_and_ps(_mm_cmplt_ps(*this, zero), _mm_set1_ps(-1.0f));
+            __m128 val = _mm_load_ps(_val);
+            __m128 positive = _mm_and_ps(_mm_cmpgt_ps(val, zero), _mm_set1_ps(1.0f));
+            __m128 negative = _mm_and_ps(_mm_cmplt_ps(val, zero), _mm_set1_ps(-1.0f));
 
             return _mm_or_ps(positive, negative);
         }
@@ -59,13 +59,13 @@ namespace mathsimd {
 
         [[nodiscard]] inline float sqrMagnitude() const { return dot(*this, *this); }
         [[nodiscard]] inline float magnitude() const { 
-            float f = sqrMagnitude(); 
+            auto f = sqrMagnitude(); 
             auto v = _mm_load_ss(&f);
             _mm_store_ss(&f, _mm_mul_ss(v, _mm_rsqrt_ss(v)));
             return f;
         }
         [[nodiscard]] inline float4 normalized() const {
-            auto f = sqrMagnitude();
+            auto const f = sqrMagnitude();
             return _mm_mul_ps( *this, _mm_rsqrt_ps(_mm_load_ps1(&f)) );
         }
 

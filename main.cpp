@@ -1,4 +1,3 @@
-#include <cstdio>
 #include "tests/tests.hpp"
 
 int main() {
@@ -12,8 +11,6 @@ int main() {
         mathtests::test_float4x4_matmul();
         mathtests::test_float4x4_vecmul();
     }
-
-
 
     return 0;
 }
