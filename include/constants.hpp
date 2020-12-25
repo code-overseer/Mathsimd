@@ -1,9 +1,12 @@
 #ifndef MATHEMATICS_CONSTANTS_HPP
 #define MATHEMATICS_CONSTANTS_HPP
-
-namespace mathsimd {
-    constexpr float EPSILON_F = 1e-6f;
-    constexpr double EPSILON_D = 1e-13f;
+#include <cfloat>
+namespace mathsimd 
+{
+    constexpr float EPSILON_F = FLT_EPSILON;
+    constexpr double EPSILON_D = DBL_EPSILON;
+    constexpr float MIN_F = 0x00800000;
+    constexpr float FAST_ERROR_F = 0x39800000;
 }
 
 #endif //MATHEMATICS_CONSTANTS_HPP

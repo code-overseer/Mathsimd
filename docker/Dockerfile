@@ -1,2 +1,11 @@
-FROM gcc:latest
-RUN apt-get update && apt-get install -y cmake && apt-get install -y emacs && rm -rf /var/lib/apt/lists/* 
+FROM gcc:cmake
+RUN apt-get update && \
+apt-get install -y ssh \
+gdb \
+tar \
+python && \
+apt-get clean
+
+RUN useradd -m user && yes password | passwd user
+
+RUN mkdir /var/run/sshd

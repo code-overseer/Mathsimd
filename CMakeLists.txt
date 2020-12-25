@@ -11,6 +11,6 @@ endif()
 
 add_executable(Mathematics 
     main.cpp 
-    tests/tests.cpp 
-    include/random.hpp 
-    include/operations.hpp)
+    include/mathsimd.hpp
+    tests/tests.hpp
+    tests/tests.cpp )

@@ -3,18 +3,22 @@
 
 #include <immintrin.h>
 #include "constants.hpp"
+#include "vector_operations.hpp"
 #include "float2.hpp"
 #include "float3.hpp"
+#include "bool.hpp"
 
-
-namespace mathsimd {
-
-    struct float4 {
-    private:
+namespace mathsimd 
+{
+    struct float4 : TensorBase<float, 4, 1>, private Operations<float4, SimdVectorPolicy<float>::M128>
+    {
+    protected:
         alignas(16) float _val[4]{0.f, 0.f, 0.f, 0.f};
     public:
+
         float4() = default;
-        float4(float const &x, float const &y, float const &z, float const &w) : _val{x, y, z, w} {}
+		float4(float (&other)[4]) { _mm_store_ps(_val, _mm_load_ps(other)); }
+		float4(float const &x, float const &y, float const &z, float const &w) : _val{x, y, z, w} {}
         float4(float const &x, float3 const &yzw) : _val{x, yzw.x(), yzw.y(), yzw.z()} {}
         float4(float3 const &xyz, float const &w) : _val{xyz.x(), xyz.y(), xyz.z(), w} {}
         float4(float const &x, float const &y, float2 const &zw) : _val{x, y, zw.x(), zw.y()} {}
@@ -23,10 +27,15 @@ namespace mathsimd {
         float4(float4 const &other) { _mm_store_ps(_val, _mm_load_ps(other._val)); }
         float4(float const* other) { _mm_storeu_ps(_val, _mm_loadu_ps(other));}
         float4(__m128 const &other) { _mm_store_ps(_val, other); }
+        float4(float const &x) { _mm_store_ps(_val, _mm_broadcast_ss(&x)); }
+        inline operator float*() { return _val; }
         inline operator float const*() const { return _val; }
         inline operator __m128() const { return _mm_load_ps(_val); }
         inline float4 &operator=(float4 const &other) = default;
         inline float4 &operator=(__m128 const &other) { _mm_store_ps(_val, other); return *this; }
+        inline float operator[](size_t const idx) const { return _val[idx]; }
+        inline float& operator[](size_t const idx) { return _val[idx]; }
+        
         float &x() { return _val[0]; }
         float &y() { return _val[1]; }
         float &z() { return _val[2]; }
@@ -35,41 +44,6 @@ namespace mathsimd {
         [[nodiscard]] float y() const { return _val[1]; }
         [[nodiscard]] float z() const { return _val[2]; }
         [[nodiscard]] float w() const { return _val[3]; }
-
-        #define ARITHMETIC(OP) \
-        friend float4 operator OP (float4 const &a, float4 const &b); \
-        friend float4 operator OP (float const &a, float4 const &b); \
-        friend float4 operator OP (float4 const &a, float const &b);
-        ARITHMETIC(+)
-        ARITHMETIC(-)
-        ARITHMETIC(*)
-        ARITHMETIC(/)
-        #undef ARITHMETIC
-
-        inline float4 sign() const {
-            __m128 zero = _mm_setzero_ps();
-            __m128 val = _mm_load_ps(_val);
-            __m128 positive = _mm_and_ps(_mm_cmpgt_ps(val, zero), _mm_set1_ps(1.0f));
-            __m128 negative = _mm_and_ps(_mm_cmplt_ps(val, zero), _mm_set1_ps(-1.0f));
-
-            return _mm_or_ps(positive, negative);
-        }
-
-        friend float dot(float4 const &a, float4 const &b);
-
-        [[nodiscard]] inline float sqrMagnitude() const { return dot(*this, *this); }
-        [[nodiscard]] inline float magnitude() const { 
-            auto f = sqrMagnitude(); 
-            auto v = _mm_load_ss(&f);
-            _mm_store_ss(&f, _mm_mul_ss(v, _mm_rsqrt_ss(v)));
-            return f;
-        }
-        [[nodiscard]] inline float4 normalized() const {
-            auto const f = sqrMagnitude();
-            return _mm_mul_ps( *this, _mm_rsqrt_ps(_mm_load_ps1(&f)) );
-        }
-
-        friend float4 cross(float4 const &a, float4 const &b);
 
         #define FUNC(NAME,X,Y,Z,W) \
         static inline float4 NAME () { return {X,Y,Z,W}; }
@@ -86,5 +60,13 @@ namespace mathsimd {
         FUNC(origin, 0,0,0,1)
         #undef FUNC
     };
+
+	template<typename OperationPolicy>
+	struct Float4 : float4, private Operations<Float4<OperationPolicy>, OperationPolicy>
+	{
+		using base_type = float4;
+		using float4::float4;
+		REBINDER(Float4, OperationPolicy)
+	};
 }
 #endif //MATHEMATICS_SIMD_FLOAT4_HPP
