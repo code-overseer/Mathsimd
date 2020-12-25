@@ -8,7 +8,7 @@ namespace mathsimd
 	struct TensorBase
 	{
 		static_assert(std::is_arithmetic<T>::value);
-		using type = T;
+		using numeric_type = T;
 		static constexpr size_t rows = R;
 		static constexpr size_t cols = C;
 		static constexpr size_t length = R * C;

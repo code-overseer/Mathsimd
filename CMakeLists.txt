@@ -10,7 +10,7 @@ if (APPLE)
 endif()
 
 add_executable(Mathematics 
-    main.cpp 
-    include/mathsimd.hpp
+    main.cpp
+    include/policies/M128.hpp
     tests/tests.hpp
     tests/tests.cpp )
