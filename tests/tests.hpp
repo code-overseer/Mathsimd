@@ -6,6 +6,7 @@
 #include <stdexcept>
 #include <functional>
 #include <sstream>
+#include <tuple>
 
 namespace mathtests
 {
@@ -39,6 +40,8 @@ namespace mathtests
 				return stream.str();
 			}
 		public:
+			template<typename T, typename... Ts>
+			explicit Callable(T&& func, Ts&&... args) : callable{func}, args{std::forward_as_tuple(args...)} {}
 
 			TResult operator()() override
 			{
@@ -92,7 +95,7 @@ namespace mathtests
 					fprintf(stderr, "%s failed!\nExpected: %s\nActual:%s\n", name, stringify(expected_val).c_str(), stringify(actual_val).c_str());
 					throw Fail(name);
 				}
-				fprintf(stdout, "%s passed!\n");
+				fprintf(stdout, "%s passed!\n", name);
 			}
 
 			template<typename TResult, typename Equality>
@@ -111,14 +114,17 @@ namespace mathtests
 					fprintf(stderr, "%s failed!\nExpected: %s\nActual:%s\n", name, stringify(expected_val).c_str(), stringify(actual_val).c_str());
 					throw Fail(name);
 				}
-				fprintf(stdout, "%s passed!\n");
+				fprintf(stdout, "%s passed!\n", name);
 			}
 
 			template<typename T>
-			std::string stringify(T&& arg) { return arg; }
+			std::string stringify(T&& arg)
+			{
+				std::stringstream stream;
+				stream << std::forward<T>(arg);
+				return stream.str();
+			}
 		};
-
-
 	};
 }
 

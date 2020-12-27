@@ -1,21 +1,25 @@
-#include "tests/tests.hpp"
 #include "include/policies/M128.hpp"
+#include <cstdio>
+//#include "tests/tests.hpp"
+
 struct float4x4
 {
-	static constexpr size_t length = 16;
-	alignas(32) float vals[16]{0.0f};
-	inline operator float*() noexcept { return vals; }
-	inline operator float const*() const noexcept { return vals; }
-	inline float& operator[](size_t const idx) { return vals[idx]; }
-	inline float operator[](size_t const idx) const { return vals[idx]; }
+	static constexpr size_t size() { return 16; }
+	static constexpr size_t aligned_floats() { return 8; }
+	static constexpr size_t alignment() { return 32; }
+	alignas(32) float values[4][4]{0.0f};
+	inline operator float*() noexcept { return *values; }
+	inline operator float const*() const noexcept { return *values; }
+	inline float& operator[](size_t const idx) { return values[idx / 4][idx % 4]; }
+	inline float operator[](size_t const idx) const { return values[idx / 4][idx % 4]; }
 	void print() const
 	{
 		for (auto i = 0; i < 4; ++i)
 		{
-			printf("(%f ", vals[i]);
+			printf("(%f ", values[0][i]);
 			for (auto j = 1; j < 4; ++j)
 			{
-				printf(", %f", vals[i + j * 4]);
+				printf(", %f", values[j][i]);
 			}
 			puts(")");
 		}
@@ -25,8 +29,8 @@ struct float4x4
 int main()
 {
 	using namespace mathsimd;
-	M128<float4x4>::load(0.0f);
-	mathtests::RunTests();
+	float4x4 f;
+	f.print();
 
     return 0;
 }

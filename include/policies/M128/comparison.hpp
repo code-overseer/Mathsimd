@@ -9,26 +9,28 @@ struct mathsimd::M128<T>::Comparison
 	static constexpr size_t bits_per_byte = 8;
 	static_assert(std::conjunction<
 		std::is_convertible<TBool, char*>,
-		std::negation<std::is_pointer<TBool>>,
-		std::bool_constant<(sizeof(TBool) * bits_per_byte) >= float_count>>::value);
+		std::bool_constant<TBool::size() >= float_count>,
+		std::bool_constant<TBool::bit_alignment() == alignment>>::value); // bitfield must have inner bit alignment
+	static constexpr size_t bit_alignment = TBool::bit_alignment();
+
 private:
 	template<size_t RegisterIdx>
-	static constexpr size_t bit_offset()
+	static constexpr size_t offset()
 	{
-		return (RegisterIdx % (bits_per_byte / aligned_floats)) * aligned_floats;
+		return (RegisterIdx % (bits_per_byte / bit_alignment));
 	}
 
 	template<size_t RegisterIdx>
 	static constexpr char clear_mask()
 	{
-		return ((1u << aligned_floats) - 1) << (aligned_floats * !bit_offset<RegisterIdx>());
+		return ((1u << bit_alignment) - 1) << offset<RegisterIdx>();
 	}
 
-	template<size_t RegisterIdx> //todo deal with odd aligned float counts
+	template<size_t RegisterIdx>
 	static void set(TBool& bitfield, int const &result)
 	{
-		auto* ptr = static_cast<char*>(bitfield) + RegisterIdx * aligned_floats / bits_per_byte;
-		char const mask = (result << bit_offset<RegisterIdx>());
+		auto* ptr = static_cast<char*>(bitfield) + RegisterIdx * bit_alignment / bits_per_byte;
+		char const mask = (result << (offset<RegisterIdx>() * bit_alignment));
 
 		*ptr &= clear_mask<RegisterIdx>();
 		*ptr |= mask;

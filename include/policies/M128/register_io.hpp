@@ -3,6 +3,7 @@
 
 #include "../M128.hpp"
 
+/// Unused, WIP
 template<typename T> template<size_t N, bool IsAligned, bool IsExcess>
 struct mathsimd::M128<T>::RegisterIO
 {

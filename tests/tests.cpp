@@ -1,20 +1,8 @@
-#include <cstdio>
+#include "tests.hpp"
 #include "../include/constants.hpp"
 
 
 constexpr int SEED = 1234;
-
-template<typename T1, typename T2>
-static void assert_exact(T1 const& normal, T2 const& simd)
-{
-	static_assert(T1::length == T2::length);
-	auto n = static_cast<float const*>(normal);
-	auto s = static_cast<float const*>(simd);
-	for (auto i = 0; i < T1::length; ++i)
-	{
-		assert(n[i] == s[i]);
-	}
-}
 
 static bool equals(float a, float b, float epsilon)
 {
@@ -31,27 +19,6 @@ static bool equals(float a, float b, float epsilon)
 	else
 	{
 		return diff / (std::fabs(a) + std::fabs(b)) < epsilon;
-	}
-}
-
-static void assert_equals(float const& normal, float const& simd, float epsilon)
-{
-	if (!equals(normal, simd, epsilon))
-	{
-		printf("%f %f\n", normal, simd);
-		throw -1;
-	}
-}
-
-template<typename T1, typename T2>
-static void assert_equals(T1 const& normal, T2 const& simd, float epsilon)
-{
-	static_assert(T1::length == T2::length);
-	auto n = static_cast<float const*>(normal);
-	auto s = static_cast<float const*>(simd);
-	for (auto i = 0; i < T1::length; ++i)
-	{
-		assert_equals(n[i],s[i], epsilon);
 	}
 }
 

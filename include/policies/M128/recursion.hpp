@@ -2,134 +2,151 @@
 #define MATHEMATICS_RECURSION_HPP
 
 #include "../M128.hpp"
+#include <tuple>
+
+/// Only works with register_count <= 16, I don't know what will happen if you exceed this limit
 template<typename T>
 struct mathsimd::M128<T>::Recursion
 {
 private:
-	template<size_t... N>
-	struct recursion_helper;
 
-	template<> // todo deal with register_count > 16
-	struct recursion_helper<> // Entry point
+	// Compiler should optimize out the Register array[]
+#define HELPER_FUNC(FUNC,OP) \
+	template<size_t N,size_t... Idx> \
+	static float FUNC(std::index_sequence<Idx...> seq, Register (&regs)[N]) \
+	{ \
+		if constexpr (N % 2) \
+		{ \
+			Register array[]{_mm_##OP##_ps(regs[2 * Idx], regs[2 * Idx + 1])..., regs[N - 1]}; \
+			return FUNC(array); \
+		} \
+		else \
+		{ \
+			Register array[]{_mm_##OP##_ps(regs[2 * Idx], regs[2 * Idx + 1])...}; \
+			return FUNC(array); \
+		} \
+	} \
+	template<size_t N> \
+	static float FUNC(Register (&regs)[N]) \
+	{ \
+		if constexpr (N != 1) \
+		{ \
+			return FUNC(std::make_index_sequence<(N / 2)>{}, regs); \
+		} \
+		else \
+		{ \
+			return FUNC(regs[0]); \
+		} \
+	} \
+	static float FUNC(Register v) \
+	{ \
+		if constexpr (aligned_floats == 1) \
+		{ \
+			float f; \
+			_mm_store_ss(&f, v); \
+			return f; \
+		} \
+		else if constexpr (aligned_floats == 2) \
+		{ \
+			float f; \
+			v = _mm_##OP##_ps(v, _mm_shuffle_ps(v, v, _MM_SHUFFLE(0, 1, 0, 1))); \
+			_mm_store_ss(&f, v); \
+			return f; \
+		} \
+		else if constexpr (aligned_floats == 3) \
+		{ \
+			float f; \
+			v = _mm_##OP##_ps(v, _mm_shuffle_ps(v, v, _MM_SHUFFLE(3, 2, 0, 1))); \
+			v = _mm_##OP##_ps(v, _mm_shuffle_ps(v, v, _MM_SHUFFLE(3, 0, 2, 2))); \
+			_mm_store_ss(&f, v); \
+			return f; \
+		} \
+		else \
+		{ \
+			float f; \
+			v = _mm_##OP##_ps(v, _mm_shuffle_ps(v, v, _MM_SHUFFLE(2, 1, 0, 3))); \
+			v = _mm_##OP##_ps(v, _mm_shuffle_ps(v, v, _MM_SHUFFLE(1, 0, 3, 2))); \
+			_mm_store_ss(&f, v); \
+			return f; \
+		} \
+	} \
+	template<size_t... Idx> \
+	static float FUNC(std::index_sequence<Idx...>, T const& vector) \
+	{ \
+		if constexpr (register_count % 2) \
+		{ \
+			Register array[]{_mm_##OP##_ps(load<Idx * 2>(vector), load<Idx * 2 + 1>(vector))..., load<register_count - 1>(vector)}; \
+			return FUNC(array); \
+		} \
+		else \
+		{ \
+			Register array[]{_mm_##OP##_ps(load<Idx * 2>(vector), load<Idx * 2 + 1>(vector))...}; \
+			return FUNC(array); \
+		} \
+	} \
+	static float FUNC(std::index_sequence<>, T const& vector) \
+	{ \
+		return FUNC(load<0>(vector)); \
+	}
+
+	HELPER_FUNC(minimum,min)
+	HELPER_FUNC(maximum,max)
+	HELPER_FUNC(sum,add)
+	HELPER_FUNC(difference,sub)
+#undef HELPER_FUNC
+	template<size_t... Idx> 
+	static float sum_product(std::index_sequence<Idx...>, T const& left, T const& right)
 	{
-		template<size_t... Idx>
-		static float minimum(T const& vector, std::index_sequence<Idx...> seq)
+		if constexpr (register_count % 2) 
 		{
-			static constexpr size_t pair_count = decltype(seq)::size();
-			if constexpr (register_count == 1)
-			{
-				return recursion_helper<1>::minimum(load<0>(vector));
-			}
-			else if constexpr (register_count % 2)
-			{
-				return recursion_helper<pair_count + 1>::
-				minimum(_mm_min_ps(load<Idx * 2>(vector), load<Idx * 2 + 1>(vector))..., load<register_count - 1>(vector));
-			}
-			else
-			{
-				return recursion_helper<pair_count>::
-				minimum(_mm_min_ps(load<Idx * 2>(vector), load<Idx * 2 + 1>(vector))...);
-			}
-		}
-
-		static float minimum(T const& vector)
+			Register rights[]{ _mm_mul_ps(load<Idx * 2 + 1>(left), load<Idx * 2 + 1>(right))...};
+			Register array[]{_mm_fmadd_ps(load<Idx * 2>(left), load<Idx * 2>(right), rights[Idx])...,
+					_mm_mul_ps(load<register_count - 1>(left), load<register_count - 1>(right))};
+			return FUNC(array); 
+		} 
+		else 
 		{
-			return minimum(vector, std::make_index_sequence<(register_count / 2)>{});
-		}
-	};
-
-	template<size_t N>
-	struct recursion_helper<N> // Common case
+			Register rights[]{ _mm_mul_ps(load<Idx * 2 + 1>(left), load<Idx * 2 + 1>(right))...};
+			Register array[]{_mm_fmadd_ps(load<Idx * 2>(left), load<Idx * 2>(right), rights[Idx])...};
+			return FUNC(array); 
+		} 
+	} 
+	static float sum_product(std::index_sequence<>, T const& left, T const& right)
+	{ 
+		return sum(_mm_mul_ps(load<0>(left), load<0>(right)));
+	}
+	template<size_t... Idx>
+	static float diff_product(std::index_sequence<Idx...>, T const& left, T const& right)
 	{
-		template <int I, class... Ts>
-		static decltype(auto) get(Ts&&... ts)
+		if constexpr (register_count % 2)
 		{
-			return std::get<I>(std::forward_as_tuple(ts...));
+			Register rights[]{ _mm_mul_ps(load<Idx * 2 + 1>(left), load<Idx * 2 + 1>(right))...};
+			Register array[]{_mm_fmsub_ps(load<Idx * 2>(left), load<Idx * 2>(right), rights[Idx])...,
+							 _mm_mul_ps(load<register_count - 1>(left), load<register_count - 1>(right))};
+			return FUNC(array);
 		}
-
-		template<size_t... Idx, typename... Reg>
-		static float minimum(std::index_sequence<Idx...> seq, Reg&&... regs)
+		else
 		{
-			static constexpr size_t pair_count = decltype(seq)::size();
-			if constexpr (N % 2)
-			{
-				return recursion_helper<pair_count + 1>::
-				minimum(_mm_min_ps(get<2 * Idx>(regs...), get<2 * Idx + 1>(regs...))..., std::get<N - 1>(regs...));
-			}
-			else
-			{
-				return recursion_helper<pair_count>::
-				minimum(_mm_min_ps(get<2 * Idx>(regs...), get<2 * Idx + 1>(regs...))...);
-			}
+			Register rights[]{ _mm_mul_ps(load<Idx * 2 + 1>(left), load<Idx * 2 + 1>(right))...};
+			Register array[]{_mm_fmadd_ps(load<Idx * 2>(left), load<Idx * 2>(right), rights[Idx])...};
+			return FUNC(array);
 		}
-
-		template<typename... Reg>
-		static float minimum(Reg&&... regs)
-		{
-			return minimum(std::make_index_sequence<(N / 2)>{}, std::forward<Reg>(regs)...);
-		}
-	};
-
-	template<>
-	struct recursion_helper<1> // Termination
+	}
+	static float diff_product(std::index_sequence<>, T const& left, T const& right)
 	{
-		static float minimum(Register v)
-		{
-			return minimum<aligned_floats>(v);
-		}
-
-		template<size_t FloatCount>
-		static float minimum(Register v);
-
-		template<>
-		static float minimum<1>(Register v)
-		{
-			float f;
-			store(f, v);
-			return f;
-		}
-
-		template<>
-		static float minimum<2>(Register v)
-		{
-			float f;
-			v = _mm_min_ps(v, _mm_shuffle_ps(v, v, _MM_SHUFFLE(0, 1, 0, 1)));
-			store(f, v);
-			return f;
-		}
-
-		template<>
-		static float minimum<3>(Register v)
-		{
-			float f;
-			v = _mm_min_ps(v, _mm_shuffle_ps(v, v, _MM_SHUFFLE(3, 2, 0, 1)));
-			v = _mm_min_ps(v, _mm_shuffle_ps(v, v, _MM_SHUFFLE(3, 0, 2, 2)));
-			store(f,v);
-			return f;
-		}
-
-		template<>
-		static float minimum<4>(Register v)
-		{
-			float f;
-			v = _mm_min_ps(v, _mm_shuffle_ps(v, v, _MM_SHUFFLE(2, 1, 0, 3)));
-			v = _mm_min_ps(v, _mm_shuffle_ps(v, v, _MM_SHUFFLE(1, 0, 3, 2)));
-			store(f, v);
-			return f;
-		}
-	};
+		return difference(_mm_mul_ps(load<0>(left), load<0>(right)));
+	}
 
 public:
 #define PUBLIC_UNARY_OP(FUNC) \
     static decltype(auto) FUNC(T const& vector) \
     { \
-		return recursion_helper<>::FUNC(vector); \
+		return FUNC(std::make_index_sequence<(register_count / 2)>{}, vector); \
     }
-
 	PUBLIC_UNARY_OP(minimum)
-//	PUBLIC_UNARY_OP(maximum)
-//	PUBLIC_UNARY_OP(sum)
-//	PUBLIC_UNARY_OP(difference)
+	PUBLIC_UNARY_OP(maximum)
+	PUBLIC_UNARY_OP(sum)
+	PUBLIC_UNARY_OP(difference)
 #undef PUBLIC_UNARY_OP
 };
 
