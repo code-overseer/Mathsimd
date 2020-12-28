@@ -9,9 +9,10 @@ namespace mathsimd
 	{
 		static_assert(std::is_arithmetic<T>::value);
 		using numeric_type = T;
-		static constexpr size_t rows = R;
-		static constexpr size_t cols = C;
-		static constexpr size_t length = R * C;
+		static size_t constexpr rows() { return R; }
+		static size_t constexpr cols() { return C; }
+		static size_t constexpr length() { return R * C; };
+		static size_t constexpr active_bytes() { return length() * sizeof(numeric_type); }
 	};
 
 }
