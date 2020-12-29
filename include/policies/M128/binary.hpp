@@ -3,10 +3,11 @@
 
 #include "../M128.hpp"
 
+
 template<typename T>
 struct mathsimd::M128<T>::Binary
 {
-#define BINARY_OP(FUNC,OP) \
+#define HELPER_FUNC(FUNC,OP) \
 private: \
 	template<size_t N> \
 	static void FUNC(T& result, T const& left, T const& right) \
@@ -44,29 +45,42 @@ private: \
 		(FUNC<Idx>(result, broadcast(left), right),...); \
 		return result; \
 	} \
-public: \
-	static decltype(auto) FUNC(T const& left, T const& right) \
-	{ \
-		return FUNC(left, right, std::make_index_sequence<register_count>{}); \
-	} \
-	static decltype(auto) FUNC(T const& left, float const& right) \
-	{ \
-		return FUNC(left, right, std::make_index_sequence<register_count>{}); \
-	} \
-	static decltype(auto) FUNC(float const& left, T const& right) \
-	{ \
-		return FUNC(left, right, std::make_index_sequence<register_count>{}); \
-	}
 
-	BINARY_OP(add, add)
-	BINARY_OP(subtract, sub)
-	BINARY_OP(multiply, mul)
-	BINARY_OP(divide, div)
-	BINARY_OP(minimum, min)
-	BINARY_OP(maximum, max)
-#undef BINARY_OP
+	HELPER_FUNC(add, add)
+	HELPER_FUNC(subtract, sub)
+	HELPER_FUNC(multiply, mul)
+	HELPER_FUNC(divide, div)
+	HELPER_FUNC(minimum, min)
+	HELPER_FUNC(maximum, max)
+#undef HELPER_FUNC
 
 };
+
+#define BINARY_OPS(FUNC) \
+template<typename T> \
+decltype(auto) mathsimd::M128<T>::FUNC(T const& left, T const& right) \
+{ \
+	return Binary::FUNC(left, right, std::make_index_sequence<register_count>{}); \
+} \
+template<typename T> \
+decltype(auto) mathsimd::M128<T>::FUNC(T const& left, float const& right) \
+{ \
+	return Binary::FUNC(left, right, std::make_index_sequence<register_count>{}); \
+} \
+template<typename T> \
+decltype(auto) mathsimd::M128<T>::FUNC(float const& left, T const& right) \
+{ \
+	return Binary::FUNC(left, right, std::make_index_sequence<register_count>{}); \
+}
+
+BINARY_OPS(add)
+BINARY_OPS(subtract)
+BINARY_OPS(multiply)
+BINARY_OPS(divide)
+BINARY_OPS(maximum)
+BINARY_OPS(minimum)
+
+#undef BINARY_OPS
 
 
 #endif //MATHEMATICS_BINARY_HPP

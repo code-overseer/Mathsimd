@@ -4,13 +4,13 @@
 
 namespace mathsimd {
     
-    template<size_t N>
+    template<size_t Size, size_t BitAlignment>
     struct Bool
     {
     private:
         int _value{0};
-        static_assert(N && N <= (sizeof(decltype(_value)) << 3));
-        static constexpr int _all = (1 << N) - 1;
+        static_assert(Size && Size <= (sizeof(decltype(_value)) << 3));
+        static constexpr int _all = (1 << Size) - 1;
     public:
     	Bool() = default;
         explicit Bool(char const* val)
@@ -38,6 +38,8 @@ namespace mathsimd {
         void clear(size_t const idx) { _value &= ~(1 << idx); }
         char* data() { return reinterpret_cast<char*>(&_value); }
         char const* data() const { return reinterpret_cast<char const*>(&_value); }
+        inline operator char *() { return data(); }
+		inline operator char const*() const { return data(); }
     };
     
 }

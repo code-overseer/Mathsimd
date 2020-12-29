@@ -5,7 +5,6 @@
 template<typename T>
 struct mathsimd::M128<T>::Unary
 {
-private:
 	template<size_t N>
 	static void reciprocal(T& result, T const& vector)
 	{
@@ -38,7 +37,34 @@ private:
 		store<N>(result, _mm_sqrt_ps(load<N>(vector)));
 	}
 
-#define PRIVATE_UNARY_FORWARD(FUNC) \
+	static void reciprocal(float& result, float const& scalar)
+	{
+		store(result, _mm_rcp_ps(load(scalar)));
+	}
+
+	static void sign(float& result, float const& scalar)
+	{
+		auto reg = _mm_castps_si128(load(scalar));
+		auto ones = _mm_castps_si128(broadcast(1.0f));
+		store(result, _mm_castsi128_ps(_mm_sign_epi32(ones, reg)));
+	}
+
+	static void absolute(float& result, float const& scalar)
+	{
+		store(result, _mm_castsi128_ps(_mm_abs_epi32(_mm_castps_si128(load(scalar)))));
+	}
+
+	static void rsqrt(float& result, float const& scalar)
+	{
+		store(result, _mm_rsqrt_ps(load(scalar)));
+	}
+
+	static void sqrt(float& result, float const& scalar)
+	{
+		store(result, _mm_sqrt_ps(load(scalar)));
+	}
+
+#define HELPER_FUNC(FUNC) \
 		template<size_t... Idx> \
 		static T FUNC(T const& vector, std::index_sequence<Idx...>) \
 		{ \
@@ -47,26 +73,39 @@ private:
 			return result; \
 		}
 
-	PRIVATE_UNARY_FORWARD(reciprocal)
-	PRIVATE_UNARY_FORWARD(sign)
-	PRIVATE_UNARY_FORWARD(absolute)
-	PRIVATE_UNARY_FORWARD(rsqrt)
-	PRIVATE_UNARY_FORWARD(sqrt)
+	HELPER_FUNC(reciprocal)
+	HELPER_FUNC(sign)
+	HELPER_FUNC(absolute)
+	HELPER_FUNC(rsqrt)
+	HELPER_FUNC(sqrt)
 #undef PRIVATE_UNARY_FORWARD
-
-public:
-#define PUBLIC_UNARY_OP(FUNC) \
-    static decltype(auto) FUNC(T const& vector) \
-    { \
-        return FUNC(vector, std::make_index_sequence<register_count>{}); \
-    }
-
-	PUBLIC_UNARY_OP(reciprocal)
-	PUBLIC_UNARY_OP(sign)
-	PUBLIC_UNARY_OP(absolute)
-	PUBLIC_UNARY_OP(rsqrt)
-	PUBLIC_UNARY_OP(sqrt)
-#undef PUBLIC_UNARY_OP
 };
+
+#define UNARY_OPS(FUNC) \
+template<typename T> \
+decltype(auto) mathsimd::M128<T>::FUNC(T const& vector) \
+{ \
+	return Unary::FUNC(vector, std::make_index_sequence<register_count>{}); \
+}
+
+UNARY_OPS(reciprocal)
+UNARY_OPS(sign)
+UNARY_OPS(absolute)
+UNARY_OPS(rsqrt)
+UNARY_OPS(sqrt)
+#undef UNARY_OPS
+#define UNARY_OPS(FUNC) \
+template<typename T> \
+decltype(auto) mathsimd::M128<T>::FUNC(float const& scalar) \
+{ \
+	return Unary::FUNC(scalar); \
+}
+
+UNARY_OPS(reciprocal)
+UNARY_OPS(sign)
+UNARY_OPS(absolute)
+UNARY_OPS(rsqrt)
+UNARY_OPS(sqrt)
+#undef UNARY_OPS
 
 #endif //MATHEMATICS_UNARY_HPP

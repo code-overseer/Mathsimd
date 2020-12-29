@@ -8,12 +8,10 @@
 template<typename T>
 struct mathsimd::M128<T>::Recursion
 {
-private:
-
 	// Compiler should optimize out the Register array[]
 #define HELPER_FUNC(FUNC,OP) \
 	template<size_t N,size_t... Idx> \
-	static float FUNC(std::index_sequence<Idx...> seq, Register (&regs)[N]) \
+	static float FUNC(Register (&regs)[N], std::index_sequence<Idx...>) \
 	{ \
 		if constexpr (N % 2) \
 		{ \
@@ -31,7 +29,7 @@ private:
 	{ \
 		if constexpr (N != 1) \
 		{ \
-			return FUNC(std::make_index_sequence<(N / 2)>{}, regs); \
+			return FUNC(regs, std::make_index_sequence<(N / 2)>{}); \
 		} \
 		else \
 		{ \
@@ -71,7 +69,7 @@ private:
 		} \
 	} \
 	template<size_t... Idx> \
-	static float FUNC(std::index_sequence<Idx...>, T const& vector) \
+	static float FUNC(T const& vector, std::index_sequence<Idx...>) \
 	{ \
 		if constexpr (register_count % 2) \
 		{ \
@@ -84,7 +82,7 @@ private:
 			return FUNC(array); \
 		} \
 	} \
-	static float FUNC(std::index_sequence<>, T const& vector) \
+	static float FUNC(T const& vector, std::index_sequence<>) \
 	{ \
 		return FUNC(load<0>(vector)); \
 	}
@@ -94,35 +92,14 @@ private:
 	HELPER_FUNC(sum,add)
 	HELPER_FUNC(difference,sub)
 #undef HELPER_FUNC
-	template<size_t... Idx> 
-	static float sum_product(std::index_sequence<Idx...>, T const& left, T const& right)
-	{
-		if constexpr (register_count % 2) 
-		{
-			Register rights[]{ _mm_mul_ps(load<Idx * 2 + 1>(left), load<Idx * 2 + 1>(right))...};
-			Register array[]{_mm_fmadd_ps(load<Idx * 2>(left), load<Idx * 2>(right), rights[Idx])...,
-					_mm_mul_ps(load<register_count - 1>(left), load<register_count - 1>(right))};
-			return FUNC(array); 
-		} 
-		else 
-		{
-			Register rights[]{ _mm_mul_ps(load<Idx * 2 + 1>(left), load<Idx * 2 + 1>(right))...};
-			Register array[]{_mm_fmadd_ps(load<Idx * 2>(left), load<Idx * 2>(right), rights[Idx])...};
-			return FUNC(array); 
-		} 
-	} 
-	static float sum_product(std::index_sequence<>, T const& left, T const& right)
-	{ 
-		return sum(_mm_mul_ps(load<0>(left), load<0>(right)));
-	}
 	template<size_t... Idx>
-	static float diff_product(std::index_sequence<Idx...>, T const& left, T const& right)
+	static float sum_product(T const& left, T const& right, std::index_sequence<Idx...>)
 	{
 		if constexpr (register_count % 2)
 		{
 			Register rights[]{ _mm_mul_ps(load<Idx * 2 + 1>(left), load<Idx * 2 + 1>(right))...};
-			Register array[]{_mm_fmsub_ps(load<Idx * 2>(left), load<Idx * 2>(right), rights[Idx])...,
-							 _mm_mul_ps(load<register_count - 1>(left), load<register_count - 1>(right))};
+			Register array[]{_mm_fmadd_ps(load<Idx * 2>(left), load<Idx * 2>(right), rights[Idx])...,
+					_mm_mul_ps(load<register_count - 1>(left), load<register_count - 1>(right))};
 			return FUNC(array);
 		}
 		else
@@ -132,22 +109,55 @@ private:
 			return FUNC(array);
 		}
 	}
-	static float diff_product(std::index_sequence<>, T const& left, T const& right)
+	static float sum_product(T const& left, T const& right, std::index_sequence<>)
+	{
+		return sum(_mm_mul_ps(load<0>(left), load<0>(right)));
+	}
+	template<size_t... Idx>
+	static float diff_product(T const& left, T const& right, std::index_sequence<Idx...>)
+	{
+		if constexpr (register_count % 2)
+		{
+			Register rights[]{ _mm_mul_ps(load<Idx * 2 + 1>(left), load<Idx * 2 + 1>(right))...};
+			Register array[]{_mm_fmsub_ps(load<Idx * 2>(left), load<Idx * 2>(right), rights[Idx])...,
+							 _mm_mul_ps(load<register_count - 1>(left), load<register_count - 1>(right))};
+			return difference(array);
+		}
+		else
+		{
+			Register rights[]{ _mm_mul_ps(load<Idx * 2 + 1>(left), load<Idx * 2 + 1>(right))...};
+			Register array[]{_mm_fmadd_ps(load<Idx * 2>(left), load<Idx * 2>(right), rights[Idx])...};
+			return difference(array);
+		}
+	}
+	static float diff_product(T const& left, T const& right, std::index_sequence<>)
 	{
 		return difference(_mm_mul_ps(load<0>(left), load<0>(right)));
 	}
-
-public:
-#define PUBLIC_UNARY_OP(FUNC) \
-    static decltype(auto) FUNC(T const& vector) \
-    { \
-		return FUNC(std::make_index_sequence<(register_count / 2)>{}, vector); \
-    }
-	PUBLIC_UNARY_OP(minimum)
-	PUBLIC_UNARY_OP(maximum)
-	PUBLIC_UNARY_OP(sum)
-	PUBLIC_UNARY_OP(difference)
-#undef PUBLIC_UNARY_OP
 };
+
+#define UNARY_OPS(FUNC) \
+template<typename T> \
+decltype(auto) mathsimd::M128<T>::FUNC(T const& vector) \
+{ \
+	return Recursion::FUNC(vector, std::make_index_sequence<(register_count / 2)>{}); \
+}
+
+UNARY_OPS(minimum)
+UNARY_OPS(maximum)
+UNARY_OPS(sum)
+UNARY_OPS(difference)
+#undef UNARY_OPS
+
+#define BINARY_OPS(FUNC) \
+template<typename T> \
+decltype(auto) mathsimd::M128<T>::FUNC(T const& left, T const& right) \
+{ \
+	return Recursion::FUNC(left, right, std::make_index_sequence<(register_count / 2)>{}); \
+}
+
+BINARY_OPS(sum_product)
+BINARY_OPS(diff_product)
+#undef BINARY_OPS
 
 #endif //MATHEMATICS_RECURSION_HPP

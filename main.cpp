@@ -1,5 +1,6 @@
 #include "include/policies/M128.hpp"
 #include <cstdio>
+#include "include/vector.hpp"
 //#include "tests/tests.hpp"
 
 struct float4x4
@@ -31,6 +32,7 @@ int main()
 	using namespace mathsimd;
 	float4x4 f;
 	f.print();
+	Float2<M128> vec;
 
     return 0;
 }
