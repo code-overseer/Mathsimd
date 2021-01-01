@@ -1,15 +1,12 @@
 #ifndef MATHEMATICS_REGISTER_POLICY_HPP
 #define MATHEMATICS_REGISTER_POLICY_HPP
+#include "../utility.hpp"
 
 namespace mathsimd
 {
 	template<typename T, typename Reg>
 	struct RegisterPolicy
 	{
-	protected:
-		static size_t constexpr ceil_div(size_t left, size_t right) { return 1 + ((left - 1) / right); }
-		static bool constexpr is_pow2(size_t value) { return !(value & (value - 1)); }
-	public:
 		using Register = Reg;
 		static size_t constexpr alignment()
 		{
@@ -26,17 +23,17 @@ namespace mathsimd
 		static size_t constexpr active_aligned()
 		{
 			// division to deal with larger alignments
-			return T::active_aligned_bytes() / ceil_div(alignment(), alignof(Register));
+			return T::active_aligned_bytes() / utility::not_zero(alignment()/alignof(Register));
 		}
 		static bool constexpr is_aligned() { return !(alignment() % alignof(Register)); }
 		template<typename U>
-		static size_t constexpr alignment() { return alignment() / sizeof(U); };
+		static size_t constexpr alignment() { return utility::count<U>(alignment()); };
 		template<typename U>
-		static size_t constexpr active_size() { return active_size() / sizeof(U); };
+		static size_t constexpr active_size() { return utility::count<U>(active_size()); };
 		template<typename U>
-		static size_t constexpr register_size() { return register_size() / sizeof(U); }
+		static size_t constexpr register_size() { return utility::count<U>(register_size()); }
 		template<typename U>
-		static size_t constexpr active_aligned() { return active_aligned() / sizeof(U); }
+		static size_t constexpr active_aligned() { return utility::count<U>(active_aligned()); }
 	};
 }
 

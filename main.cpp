@@ -1,6 +1,7 @@
 #include "include/policies/M128.hpp"
 #include <cstdio>
 #include "include/vector.hpp"
+#include "include/matrix_base.hpp"
 //#include "tests/tests.hpp"
 
 struct float4x4
@@ -27,12 +28,16 @@ struct float4x4
 	}
 };
 
+
 int main()
 {
 	using namespace mathsimd;
 	float4x4 f;
 	f.print();
-	Float2<M128> vec;
+	float2<M128> vec;
+
+	printf("align of float2: %zu\n", alignof(float2<M128>));
+//	printf("%f\n", convert(vec)[0]);
 
     return 0;
 }

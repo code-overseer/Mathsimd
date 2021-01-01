@@ -21,11 +21,11 @@ namespace mathsimd
 		static size_t constexpr aligned_floats = Base::template active_aligned<float>();
 		static size_t constexpr register_count = (float_count / aligned_floats);
 		static auto cast(T const& v) { return utility::smart_cast<float*>(v); }
-		static_assert(std::conjunction<
+		static_assert(std::conjunction_v<
 		    std::is_convertible<T, float const*>, // defined T::operator float const*()
-		    std::bool_constant<Base::is_pow2(Base::alignment())>, // alignment must be power of 2 and greater than 8
+		    std::bool_constant<utility::is_pow2(Base::alignment())>, // alignment must be power of 2 and greater than 8
 			std::bool_constant<(register_count > 0)>, //  at least 1 register
-			std::bool_constant<(Base::alignment() <= alignof(Register) || aligned_floats == 4)>>::value); // prevents alternating aligned floats
+			std::bool_constant<(Base::alignment() <= alignof(Register) || aligned_floats == 4)>>); // prevents alternating aligned floats
 
 		static Register load(float const& value)
 		{
